@@ -7,5 +7,5 @@ all:
 	cp grub.cfg boot/grub
 	cp kernel ./kernel.elf
 	grub-mkrescue -o test.iso
-	test
+	testtest
 #qemu-system-i386 -cdrom /home/schnee/projects/hello-world/zig-out/bin/test.iso -machine type=pc-i440fx-3.1
