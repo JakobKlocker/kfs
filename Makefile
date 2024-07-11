@@ -1,11 +1,7 @@
-
-
 all:
 	zig build -Dtarget=x86-freestanding --release=fast --summary none
-#qemu-system-i386 -kernel kernel 
 	mkdir -p boot/grub
+	mv kernel boot/kernel.elf
 	cp grub.cfg boot/grub
-	cp kernel ./kernel.elf
-	grub-mkrescue -o test.iso
-	test
-#qemu-system-i386 -cdrom /home/schnee/projects/hello-world/zig-out/bin/test.iso -machine type=pc-i440fx-3.1
+	grub-mkrescue -o test.iso .
+	qemu-system-i386 -cdrom test.iso
