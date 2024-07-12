@@ -1,6 +1,5 @@
 const ports = @import("ports.zig");
 
-
 pub const VGA_COLOR = enum(u8) {
     Black = 0,
     Blue = 1,
@@ -50,7 +49,7 @@ pub const Console = struct {
         buffer[row * WIDTH + col] = c;
 
         col += 1;
-        if (col == WIDTH) {
+        if (col >= WIDTH) {
             col = 0;
             row += 1;
         }
@@ -64,12 +63,12 @@ pub const Console = struct {
     }
 
     pub fn setCursorPosition(pos: u16) void {
-    ports.outb(0x3D4, 14);
-    ports.outb(0x3D5, @intCast(pos >> 8));
+        ports.outb(0x3D4, 14);
+        ports.outb(0x3D5, @intCast(pos >> 8));
 
-    // Send the low byte of the cursor position
-    ports.outb(0x3D4, 15);
-    ports.outb(0x3D5, @intCast(pos & 0xFF));
-}
+        // Send the low byte of the cursor position
+        ports.outb(0x3D4, 15);
+        ports.outb(0x3D5, @intCast(pos & 0xFF));
+    }
 
 };

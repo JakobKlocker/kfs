@@ -1,4 +1,5 @@
 all:
+	rm -rf test.iso
 	zig build -Dtarget=x86-freestanding --release=fast --summary none
 	mkdir -p boot/grub
 	mv kernel boot/kernel.elf
