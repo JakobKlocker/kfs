@@ -11,8 +11,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.setLinkerScript(b.path("src/linker.ld"));
     exe.addAssemblyFile(b.path("src/boot.s"));
+    exe.setLinkerScript(b.path("src/linker.ld"));
 
     b.exe_dir = "./"; // set output path
     b.installArtifact(exe);

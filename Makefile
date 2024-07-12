@@ -4,5 +4,5 @@ all:
 	mkdir -p boot/grub
 	mv kernel boot/kernel.elf
 	cp grub.cfg boot/grub
-	grub-mkrescue -o test.iso .
-	qemu-system-i386 -cdrom test.iso
+	grub-mkrescue -o kernel.img .
+	qemu-system-i386 -cdrom kernel.img
