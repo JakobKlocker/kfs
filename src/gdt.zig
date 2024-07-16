@@ -1,6 +1,4 @@
 pub const Gdt = struct {
-    const GDT_BASE: u8 = 0x00000800;
-
     const GDTR = packed struct {
         limit: u16,
         base: usize,
@@ -15,17 +13,7 @@ pub const Gdt = struct {
         base_high: u8,
     };
 
-    const gdt_entries: [7]GDT_ENTRY = .{
-        createGdtEntry(0, 0, 0, 0), // Null segment
-        createGdtEntry(0, 0xFFFFF, 0x9A, 0xCF), // Kernel Code segment
-        createGdtEntry(0, 0xFFFFF, 0x92, 0xCF), // Kernel Data segment
-        createGdtEntry(0, 0xFFFFF, 0x92, 0xCF), // Kernel Stack segment
-        createGdtEntry(0, 0xFFFFF, 0xFA, 0xCF), // User Code segment
-        createGdtEntry(0, 0xFFFFF, 0xF2, 0xCF), // User Data segment
-        createGdtEntry(0, 0xFFFFF, 0xF2, 0xCF), // User Stack segment
-    };
-
-    pub fn createGdtEntry(base: u32, limit: u32, access: u32, granularity: u8) GDT_ENTRY {
+    fn createGdtEntry(base: u32, limit: u32, access: u32, granularity: u8) GDT_ENTRY {
         return GDT_ENTRY{
             .limit_low = (limit & 0xFFFF),
             .base_low = (base & 0xFFFF),
@@ -36,14 +24,30 @@ pub const Gdt = struct {
         };
     }
 
-    pub fn init() void{
+    const gdt_entries: [7]GDT_ENTRY = .{
+        createGdtEntry(0, 0, 0, 0), // Null segment
+        createGdtEntry(0, 0xFFFFF, 0x9A, 0xCF), // Kernel Code segment
+        createGdtEntry(0, 0xFFFFF, 0x92, 0xCF), // Kernel Data segment
+        createGdtEntry(0, 0xFFFFF, 0x92, 0xCF), // Kernel Stack segment
+        createGdtEntry(0, 0xFFFFF, 0xFA, 0xCF), // User Code segment
+        createGdtEntry(0, 0xFFFFF, 0xF2, 0xCF), // User Data segment
+        createGdtEntry(0, 0xFFFFF, 0xF2, 0xCF), // User Stack segment
+    };
+
+    pub fn init() void {
         const gdtr = GDTR{
             .base = 0x00000800, // Base as defined in Subject
             .limit = 7 * @sizeOf(GDT_ENTRY) - 1,
         };
-        const new_gdt: [7]GDT_ENTRY = @ptrFromInt(gdtr.base);
-        @memcpy(new_gdt, gdt_entries); // gotta check if the buildin memcpy works like that
-        
+
+        const gdt_ptr: [*]GDT_ENTRY = @ptrFromInt(gdtr.base);
+
+        @memcpy(gdt_ptr, &gdt_entries);
+
+        asm volatile ("lgdtl (%%eax)"
+            :
+            : [gdtr] "{eax}" (&gdtr),
+        );
     }
 };
 
