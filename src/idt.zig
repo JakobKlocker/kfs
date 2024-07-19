@@ -1,38 +1,39 @@
+extern fn idtFlushASM() void;
+
 const vga = @import("console.zig");
 const console = @import("console.zig").Console;
 
-const IDT = packed struct {
+const IDT_DESCRIPTOR = packed struct {
     limit: u16,
-    base: usize,
+    base: u32,
 };
 
-const IDTEntry = packed struct {
-    offset1: u16 = 0,
+const IDT_ENTRY = packed struct {
+    base_low: u16 = 0,
     selector: u16 = 0,
-    zero: u8 = 0,
-    type_attr: u8 = 0,
-    offset2: u16 = 0,
+    reserverd_zero: u8 = 0,
+    flags: u8 = 0,
+    base_high: u16 = 0,
 };
 
-var idt: [256]IDTEntry = undefined;
-var idt_descriptor: IDT = undefined;
+var idt_entires: [256]IDT_ENTRY = undefined;
 
-pub fn init_idt() void {
-    idt_descriptor = IDT{
-        .limit = @sizeOf(@TypeOf(idt)) - 1,
-        .base = @intFromPtr(&idt),
-    };
+const idt_descriptor = IDT_DESCRIPTOR{
+    .base = @intFromPtr(&idt_entires),
+    .limit = @sizeOf(idt_entires) * 256 - 1,
+};
 
-    for (&idt) |*entry| {
-        entry.* = IDTEntry{};
+pub const idt = struct {
+    pub fn init() void {
+        @memset(&idt_entires, IDT_ENTRY{});
+
+        //set gates next
+
+        //flush IDK
+
     }
-
-    set_idt_entry(&idt[0x21], @intFromPtr(&testing), 0x08, 0x8E);
-
-    load_idt(&idt_descriptor);
-}
-
-pub inline fn load_idt(idtr: *IDT) void {
+};
+pub inline fn idtInitFlush(idtr: *IDT_DESCRIPTOR) void {
     asm volatile ("lidt (%%eax)"
         :
         : [idtr] "{eax}" (idtr),
@@ -45,9 +46,9 @@ pub fn testing() void {
     asm volatile ("iret");
 }
 
-pub fn set_idt_entry(entry: *IDTEntry, handler: usize, selector: u16, type_attr: u8) void {
-    entry.offset1 = @intCast(handler & 0xFFFF);
+pub fn setIdtEntry(entry: *idt_entires, offset: usize, selector: u16, flags: u8) void {
+    entry.base_low = @truncate(offset);
     entry.selector = selector;
-    entry.type_attr = type_attr;
-    entry.offset2 = @intCast((handler >> 16) & 0xFFFF);
+    entry.flags = flags;
+    entry.base_high = @truncate((offset >> 16));
 }
