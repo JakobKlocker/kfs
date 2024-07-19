@@ -1,6 +1,7 @@
 .extern kernel_main
 
 .global _start
+ 
 
 .set MB_MAGIC, 0x1BADB002          // This is a 'magic' constant that GRUB will use to detect our kernel's location.
 .set MB_FLAGS, 0
@@ -21,11 +22,12 @@
  
 .section .text
 	_start:
-	
-		mov $stack_top, %esp
-		call kernel_main
-		hang:
-			; cli      // Disable CPU interrupts
-			hlt      // Halt the CPU
-			; jmp hang // If that didn't work, loop around and try again.
 
+		mov $stack_top, %esp
+
+		call kernel_main
+ 
+		hang:
+			cli      // Disable CPU interrupts
+			hlt      // Halt the CPU
+			jmp hang // If that didn't work, loop around and try again.

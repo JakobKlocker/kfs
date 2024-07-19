@@ -1,5 +1,5 @@
 all:
-	zig build -Dtarget=x86-freestanding --release=fast --summary none
+	zig build -Dtarget=x86-freestanding
 	rm test.iso
 	mkdir -p boot/grub
 	mv kernel boot/kernel.elf

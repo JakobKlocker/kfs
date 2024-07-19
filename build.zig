@@ -9,11 +9,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .code_model = .kernel,
     });
 
-    exe.setLinkerScript(b.path("src/linker.ld"));
     exe.addAssemblyFile(b.path("src/boot.s"));
-    exe.addAssemblyFile(b.path("src/gdt.s"));
+    exe.setLinkerScript(b.path("linker.ld"));
 
     b.exe_dir = "./"; // set output path
     b.installArtifact(exe);
