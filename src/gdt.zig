@@ -62,6 +62,16 @@ const KERNEL_DATA_SEG = GDT_ACCESS{
     .present = 1,
 };
 
+const KERNEL_STACK_SEG = GDT_ACCESS{
+    .accessed = 0,
+    .read_write = 1,
+    .conforming_expand_down = 1, // the stack grows downwards, set to one
+    .executable = 0,
+    .descriptor_type = 1,
+    .privilege_level = 0,
+    .present = 1,
+};
+
 const USER_CODE_SEG = GDT_ACCESS{
     .accessed = 0,
     .read_write = 1,
@@ -76,6 +86,16 @@ const USER_DATA_SEG = GDT_ACCESS{
     .accessed = 0,
     .read_write = 1,
     .conforming_expand_down = 0,
+    .executable = 0,
+    .descriptor_type = 1,
+    .privilege_level = 3,
+    .present = 1,
+};
+
+const USER_STACK_SEG = GDT_ACCESS{
+    .accessed = 0,
+    .read_write = 1,
+    .conforming_expand_down = 1, // set to 1, as above stack grows down
     .executable = 0,
     .descriptor_type = 1,
     .privilege_level = 3,
@@ -103,16 +123,17 @@ const gdt_descriptor = GDT_DESCRIPTOR{
     .size = GDT_ENTRIES_LEN * @sizeOf(GDT_ENTRY) - 1,
 };
 
-// extern fn gdtFlush() void;
-
+//Took https://github.com/SamyPesse/How-to-Make-a-Computer-Operating-System/blob/master/Chapter-6/README.md as reference for stack setup
+//should find a more in depth tutorial why/how stack is used in that segment
 pub const gdt = struct {
     pub fn init() void {
         gdt_entries[0] = createGdtEntry(0, 0, NULL_SEG, NULL_FLAGS); // first GDT entry has to be NULL
         gdt_entries[1] = createGdtEntry(0, 0xFFFFF, KERNEL_CODE_SEG, BIT32_FLAGS); // Kernel Code Segment
         gdt_entries[2] = createGdtEntry(0, 0xFFFFF, KERNEL_DATA_SEG, BIT32_FLAGS); // Kernel Data Segment
-        gdt_entries[3] = createGdtEntry(0, 0xFFFFF, USER_CODE_SEG, BIT32_FLAGS); // User Code Segment
-        gdt_entries[4] = createGdtEntry(0, 0xFFFFF, USER_DATA_SEG, BIT32_FLAGS); // User Data Segment
-        gdt_entries[4] = createGdtEntry(0, 0xFFFFF, USER_DATA_SEG, BIT32_FLAGS); // User Data Segment
+        gdt_entries[3] = createGdtEntry(0, 0x0, KERNEL_STACK_SEG, BIT32_FLAGS); // Kernel Stack Segment
+        gdt_entries[4] = createGdtEntry(0, 0xFFFFF, USER_CODE_SEG, BIT32_FLAGS); // User Code Segment
+        gdt_entries[5] = createGdtEntry(0, 0xFFFFF, USER_DATA_SEG, BIT32_FLAGS); // User Data Segment
+        gdt_entries[6] = createGdtEntry(0, 0x0, USER_STACK_SEG, BIT32_FLAGS); // User Stack Segment
 
         gdtInitFlush();
     }
