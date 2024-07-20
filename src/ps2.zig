@@ -1,7 +1,15 @@
 const ports = @import("ports.zig");
 
+pub fn init() !PS2 {
+    const controller = PS2{};
+
+
+
+    return controller;
+}
+
 // this PS2 Dirver is referenced from https://wiki.osdev.org/%228042%22_PS/2_Controller
-pub const PS2 = struct {
+const PS2 = struct {
     const data: u16 = 0x60; // read and write data from/to the PS/2 Controller
     const status: u16 = 0x64; // Status register contains flags for the data port
     const command: u16 = 0x64; // Command register is used to send commands to the PS/2 controller
@@ -37,8 +45,8 @@ pub const Keyboard = struct {
             0x07 => '6',
             0x08 => '7',
             0x09 => '8',
-            0x0a => '9',
-            0x0b => '0',
+            // 0x0a => '9',
+            // 0x0b => '0',
             0x81...0xD8 => 0, // ignore key release for now
             else => 0,
         };

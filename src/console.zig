@@ -45,6 +45,8 @@ pub const Console = struct {
     }
 
     pub fn putChar(char: u8) void {
+        if (char < ' ' or char > 126) return ; // allow only printable ascii charaters to be printed to the screen
+
         const c: u16 = char | color;
         buffer[row * WIDTH + col] = c;
 
@@ -54,6 +56,9 @@ pub const Console = struct {
             row += 1;
         }
 
+        // if (row >= HEIGHT) {
+            // row = 0;
+        // }
     }
 
     pub fn write(str: []const u8) void {

@@ -1,6 +1,6 @@
 const console = @import("console.zig").Console;
 const port = @import("ports.zig");
-const keyboard = @import("PS2.zig").Keyboard;
+const keyboard = @import("ps2.zig").Keyboard;
 const VGA = @import("console.zig").VGA_COLOR;
 
 export fn kernel_main() noreturn {
