@@ -6,3 +6,4 @@ all:
 	cp grub.cfg boot/grub
 	grub-mkrescue -o test.iso .
 	qemu-system-i386 -cdrom test.iso -d int,cpu_reset -no-reboot
+#gdb /home/schnee/projects/kfs/boot/kernel.elf

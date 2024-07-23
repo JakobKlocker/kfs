@@ -74,7 +74,7 @@ const KERNEL_STACK_SEG = GDT_ACCESS{
 
 const USER_CODE_SEG = GDT_ACCESS{
     .accessed = 0,
-    .read_write = 1,
+    .read_write = 0, // check to do
     .conforming_expand_down = 0,
     .executable = 1,
     .descriptor_type = 1,
