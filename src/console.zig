@@ -23,7 +23,7 @@ pub const VGA_COLOR = enum(u8) {
 pub const Console = struct {
     const buffer: [*]volatile u16 = @ptrFromInt(0xb8000);
     const WIDTH = 80;
-    const HEIGHT = 24;
+    const HEIGHT = 25;
 
     var col: u16 = 0;
     var row: u16 = 0;
@@ -50,11 +50,14 @@ pub const Console = struct {
         buffer[row * WIDTH + col] = c;
 
         col += 1;
-        if (col == WIDTH) {
+        if (col >= WIDTH) {
             col = 0;
             row += 1;
         }
 
+        if (row >= HEIGHT) {
+            row = 0;
+        }
     }
 
     pub fn write(str: []const u8) void {
