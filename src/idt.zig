@@ -1,49 +1,53 @@
-const vga = @import("vga.zig");
+const vga = @import("console.zig");
+const console = @import("console.zig").Console;
 
-
-const IDTPointer = packed struct {
+const IDT = packed struct {
     limit: u16,
     base: usize,
 };
 
-
-// pub fn load_idt() !void {
-//     var idtr : IDTPointer = undefined;
-//     idtr.base = &idt_entry;
-//     idtr.limit = sizeof(idt_entry) - 1;
-
-//     asm volatile ("lidt [%%eax]" :
-//     "{rax}" (idtr));
-// }
-
-
 const IDTEntry = packed struct {
-    base_lo: u16 = 0,
-    sel: u16= 0,
-    zero: u8= 0,
-    flags: u8= 0,
-    base_hi: u16 = 0,
+    offset1: u16 = 0,
+    selector: u16 = 0,
+    zero: u8 = 0,
+    type_attr: u8 = 0,
+    offset2: u16 = 0,
 };
 
-const idt_entry = IDTEntry{};
+var idt: [256]IDTEntry = undefined;
+var idt_descriptor: IDT = undefined;
 
-#define KEYBOARD_IRQ 1
+pub fn init_idt() void {
+    idt_descriptor = IDT{
+        .limit = @sizeOf(@TypeOf(idt)) - 1,
+        .base = @intFromPtr(&idt),
+    };
 
+    for (&idt) |*entry| {
+        entry.* = IDTEntry{};
+    }
 
+    set_idt_entry(&idt[0x21], @intFromPtr(&testing), 0x08, 0x8E);
 
-pub fn setup_keyboard_idt_entry() void {
-    var isr_base :u32 = @intFromPtr(keyboard_test);
-
-    var selector_code_segment: u16 = 0x08;
-
-    // Populate the IDT entry for keyboard interrupt
-    idt_entry.offset_low = isr_base & 0xFFFF;
-    idt_entry.segment_selector = selector_code_segment;
-    idt_entry.reserved = 0;
-    idt_entry.type_attr = 0x8E;
-    idt_entry.offset_high = (isr_base >> 16) & 0xFFFF;
+    load_idt(&idt_descriptor);
 }
 
-pub fn keyboard_test() !void {
-    vga.printChar('Z');    
+pub inline fn load_idt(idtr: *IDT) void {
+    asm volatile ("lidt (%%eax)"
+        :
+        : [idtr] "{eax}" (idtr),
+    );
+    asm volatile ("sti");
+}
+
+pub fn testing() void {
+    console.write("called");
+    asm volatile ("iret");
+}
+
+pub fn set_idt_entry(entry: *IDTEntry, handler: usize, selector: u16, type_attr: u8) void {
+    entry.offset1 = @intCast(handler & 0xFFFF);
+    entry.selector = selector;
+    entry.type_attr = type_attr;
+    entry.offset2 = @intCast((handler >> 16) & 0xFFFF);
 }

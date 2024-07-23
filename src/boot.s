@@ -1,4 +1,3 @@
-
 .extern kernel_main
 
 .global _start

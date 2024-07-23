@@ -5,4 +5,4 @@ all:
 	mv kernel boot/kernel.elf
 	cp grub.cfg boot/grub
 	grub-mkrescue -o kernel.iso .
-	qemu-system-i386 -cdrom kernel.iso
+	qemu-system-i386 -cdrom kernel.iso -d int,cpu_reset -no-reboot
