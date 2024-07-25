@@ -175,6 +175,7 @@ comptime {
         \\ movw %ax, %es
         \\ movw %ax, %fs
         \\ movw %ax, %gs
+        \\ movw %ax, %ss
         \\ ljmp $0x08, $next
         \\ next: ret
     );
