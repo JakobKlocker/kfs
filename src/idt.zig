@@ -49,6 +49,26 @@ extern fn isr47() void;
 extern fn isr128() void;
 extern fn isr177() void;
 
+const InterruptRegs = packed struct {
+    cr2: u32,
+    ds: u32,
+    edi: u32,
+    esi: u32,
+    ebp: u32,
+    esp: u32,
+    ebx: u32,
+    edx: u32,
+    ecx: u32,
+    eax: u32,
+    int_no: u32,
+    err_code: u32,
+    eip: u32,
+    csm: u32,
+    eflags: u32,
+    useresp: u32,
+    ss: u32,
+};
+
 var error_messages = [_][]const u8{ "Division By Zero", "Debug", "Non Maskable Interrupt", "Breakpoint", "Into Detected Overflow", "Out of Bounds", "Invalid Opcode", "No Coprocessor", "Double fault", "Coprocessor Segment Overrun", "Bad TSS", "Segment not present", "Stack fault", "General protection fault", "Page fault", "Unknown Interrupt", "Coprocessor Fault", "Alignment Fault", "Machine Check", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved" };
 
 const vga = @import("console.zig");
@@ -135,8 +155,8 @@ pub const idt = struct {
         setIdtEntry(&idt_entires[46], @intFromPtr(&isr46), 0x08, 0x8E);
         setIdtEntry(&idt_entires[47], @intFromPtr(&isr47), 0x08, 0x8E);
 
-        setIdtEntry(&idt_entires[128], @intFromPtr(&isr128), 0x08, 0x8E); // 
-        setIdtEntry(&idt_entires[177], @intFromPtr(&isr177), 0x08, 0x8E); // 
+        //setIdtEntry(&idt_entires[128], @intFromPtr(&isr128), 0x08, 0x8E); //
+        //setIdtEntry(&idt_entires[177], @intFromPtr(&isr177), 0x08, 0x8E); //
 
         //setIdtEntry(&idt_entires[0x21], @intFromPtr(&keyboard_isr), 0x08, 0x8E);
 
@@ -164,56 +184,139 @@ export fn handle_keyboard() void {
     vga.Console.write("worked");
 }
 
+export fn isrHandler(regs: *InterruptRegs) void {
+    if (regs.err_code < 32) {
+        vga.Console.write(error_messages[regs.err_code]);
+        vga.Console.write("System paused");
+        while (true) {}
+    }
+}
 
-comptime
-{
-    asm
-    (
-        \\isr0:
-        \\  push 0
-        \\  jmp isr_common
+export fn isqHandler(regs: *InterruptRegs) void {
+    vga.Console.write("isq called");
+    vga.Console.write(error_messages[regs.err_code]);
+}
+
+comptime {
+    asm (
+        \\ .section .text
+        \\ .macro interruptFunctions i
+        \\ .align 4
+        \\ .type isr\i, @function
+        \\ .global isr\i
         \\
-        \\isr1:
-        \\  push 1
-        \\  jmp isr_common
+        \\ isr\i:
+        \\ cli
+        \\ .if(\i != 8 && !(\i >= 10 && \i <= 14) || \i >= 32)
+        \\     pushl $0
+        \\ .endif
         \\
+        \\ pushl $\i
+        \\ .if(\i >= 32 && \i <= 47)
+        \\     push %ebx
+        // it's a irq, not a irs
+        \\     mov $1, %ebx
+        \\ .else
+        // set ebx -> xor to 0
+        \\     xor %ebx, %ebx 
+        \\ .endif
+        \\     jmp interruptCommonStub
+        \\ .endmacro
         \\
-        \\isr_common:
+        \\ interruptFunctions 0
+        \\ interruptFunctions 1
+        \\ interruptFunctions 2
+        \\ interruptFunctions 3
+        \\ interruptFunctions 4
+        \\ interruptFunctions 5
+        \\ interruptFunctions 6
+        \\ interruptFunctions 7
+        \\ interruptFunctions 8
+        \\ interruptFunctions 9
+        \\ interruptFunctions 10
+        \\ interruptFunctions 11
+        \\ interruptFunctions 12
+        \\ interruptFunctions 13
+        \\ interruptFunctions 14
+        \\ interruptFunctions 15
+        \\ interruptFunctions 16
+        \\ interruptFunctions 17
+        \\ interruptFunctions 18
+        \\ interruptFunctions 19
+        \\ interruptFunctions 20
+        \\ interruptFunctions 21
+        \\ interruptFunctions 22
+        \\ interruptFunctions 23
+        \\ interruptFunctions 24
+        \\ interruptFunctions 25
+        \\ interruptFunctions 26
+        \\ interruptFunctions 27
+        \\ interruptFunctions 28
+        \\ interruptFunctions 29
+        \\ interruptFunctions 30
+        \\ interruptFunctions 31
+        \\
+        \\ interruptFunctions 32
+        \\ interruptFunctions 33
+        \\ interruptFunctions 34
+        \\ interruptFunctions 35
+        \\ interruptFunctions 36
+        \\ interruptFunctions 37
+        \\ interruptFunctions 38
+        \\ interruptFunctions 39
+        \\ interruptFunctions 40
+        \\ interruptFunctions 41
+        \\ interruptFunctions 42
+        \\ interruptFunctions 43
+        \\ interruptFunctions 44
+        \\ interruptFunctions 45
+        \\ interruptFunctions 46
+        \\ interruptFunctions 47
+        \\
+        \\ interruptFunctions 128
+        \\ interruptFunctions 177
+    );
+}
+
+comptime {
+    asm (
+        \\.extern isrHandler
+        \\.extern isqHandler
+        \\interruptCommonStub:
         \\  pusha
-        \\  xor eax, eax
-        \\  mov %ds, %ax
+        \\  mov %ds, %eax
+        \\  push %eax
+        \\  mov %cr2, %eax
         \\  push %eax
         \\
-        \\  mov $0x10, %ax ;kernel data segment
+        \\  mov $0x10, %ax 
         \\  mov %ax, %ds
         \\  mov %ax, %es
         \\  mov %ax, %fs
         \\  mov %ax, %gs
         \\
-        \\  push %esp   ;pass pointer to stack for zig func
-        \\  call isr_handler
+        \\  push %esp  
         \\
+        \\  cmp $1, %ebx
+        \\  je isr
+        \\  call isqHandler
+        \\  jmp skip
+        \\ isr:
+        \\  call isrHandler
+        \\
+        \\skip:
+        //; pop old which was used to check if isr or isq
+        \\  pop %ebx 
         \\  add $4, %esp 
-        \\  pop %eax     ;restore old segment
+        \\  pop %eax     
         \\  mov %ax, %ds
         \\  mov %ax, %es
         \\  mov %ax, %fs
         \\  mov %ax, %gs
         \\
         \\  popa
-        \\  aadd $8, %esp   ;remove error code
+        \\  add $8, %esp   
+        \\  sti
         \\  iret
-
-        \\.global gdtFlushASM;
-        \\.type gdtFlushASM, @function;
-        \\gdtFlushASM:
-        \\ movw $0x10, %ax
-        \\ movw %ax, %ds
-        \\ movw %ax, %es
-        \\ movw %ax, %fs
-        \\ movw %ax, %gs
-        \\ ljmp $0x08, $next
-        \\ next: ret
-    )
-
+    );
 }
