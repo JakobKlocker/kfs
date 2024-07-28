@@ -1,3 +1,5 @@
+const ports = @import("ports.zig");
+
 extern fn isr0() void;
 extern fn isr1() void;
 extern fn isr2() void;
@@ -93,8 +95,6 @@ var idt_entires: [IDT_SIZE]IDT_ENTRY = undefined;
 
 var idt_descriptor = IDT_DESCRIPTOR{ .base = 0, .limit = 0 };
 
-extern fn keyboard_isr() void;
-
 pub const idt = struct {
     pub fn init() void {
         for (&idt_entires) |*entry| {
@@ -155,15 +155,29 @@ pub const idt = struct {
         setIdtEntry(&idt_entires[46], @intFromPtr(&isr46), 0x08, 0x8E);
         setIdtEntry(&idt_entires[47], @intFromPtr(&isr47), 0x08, 0x8E);
 
-        //setIdtEntry(&idt_entires[128], @intFromPtr(&isr128), 0x08, 0x8E); //
-        //setIdtEntry(&idt_entires[177], @intFromPtr(&isr177), 0x08, 0x8E); //
-
-        //setIdtEntry(&idt_entires[0x21], @intFromPtr(&keyboard_isr), 0x08, 0x8E);
+        setIdtEntry(&idt_entires[128], @intFromPtr(&isr128), 0x08, 0x8E); //
+        setIdtEntry(&idt_entires[177], @intFromPtr(&isr177), 0x08, 0x8E); //
 
         //flush idt
         idtFlush(&idt_descriptor);
+        irqInstallHandler(1, &keyboard_isr);
     }
 };
+
+var t: u32 = 0;
+pub fn keyboard_isr(regs: *InterruptRegs) void {
+    if (regs.eax == 1) {
+        vga.Console.write("eax exists \n");
+    }
+    vga.Console.clear();
+
+    if (t == 0) {
+        vga.Console.write("key pressed");
+    } else {
+        vga.Console.write("often");
+    }
+    t += 1;
+}
 
 pub inline fn idtFlush(idtr: *IDT_DESCRIPTOR) void {
     asm volatile ("lidt (%%eax)"
@@ -180,10 +194,6 @@ pub fn setIdtEntry(entry: *IDT_ENTRY, offset: usize, selector: u16, flags: u8) v
     entry.base_high = @truncate((offset >> 16));
 }
 
-export fn handle_keyboard() void {
-    vga.Console.write("worked");
-}
-
 export fn isrHandler(regs: *InterruptRegs) void {
     if (regs.err_code < 32) {
         vga.Console.write(error_messages[regs.err_code]);
@@ -192,18 +202,31 @@ export fn isrHandler(regs: *InterruptRegs) void {
     }
 }
 
-export fn isqHandler(regs: *InterruptRegs) void {
-    vga.Console.write("isq called");
-    vga.Console.write(error_messages[regs.err_code]);
+var irq_routines: [16]?*const fn (*InterruptRegs) void = undefined;
+
+export fn irqHandler(regs: *InterruptRegs) void {
+    const irq_handler = irq_routines[regs.int_no - 32];
+    if (irq_handler) |i|
+        i(regs);
+    if (regs.int_no >= 40)
+        ports.outb(0xA0, 0x20);
+    ports.outb(0x20, 0x20);
+    vga.Console.write("called");
+}
+
+pub fn irqInstallHandler(irq: usize, handler: *const fn (*InterruptRegs) void) void {
+    irq_routines[irq] = handler;
+}
+
+pub fn irqUninstallHandler(irq: i32) void {
+    irq_routines[irq] = undefined;
 }
 
 comptime {
     asm (
-        \\ .section .text
         \\ .macro interruptFunctions i
-        \\ .align 4
-        \\ .type isr\i, @function
         \\ .global isr\i
+        \\ .type isr\i, @function
         \\
         \\ isr\i:
         \\ cli
@@ -213,12 +236,11 @@ comptime {
         \\
         \\ pushl $\i
         \\ .if(\i >= 32 && \i <= 47)
-        \\     push %ebx
-        // it's a irq, not a irs
+        // it's a irq, not a irs - irqs between 32 and 47
         \\     mov $1, %ebx
         \\ .else
         // set ebx -> xor to 0
-        \\     xor %ebx, %ebx 
+        \\     xor %ebx, %ebx
         \\ .endif
         \\     jmp interruptCommonStub
         \\ .endmacro
@@ -255,7 +277,6 @@ comptime {
         \\ interruptFunctions 29
         \\ interruptFunctions 30
         \\ interruptFunctions 31
-        \\
         \\ interruptFunctions 32
         \\ interruptFunctions 33
         \\ interruptFunctions 34
@@ -275,13 +296,10 @@ comptime {
         \\
         \\ interruptFunctions 128
         \\ interruptFunctions 177
-    );
-}
-
-comptime {
-    asm (
+        \\
+        \\
         \\.extern isrHandler
-        \\.extern isqHandler
+        \\.extern irqHandler
         \\interruptCommonStub:
         \\  pusha
         \\  mov %ds, %eax
@@ -289,33 +307,29 @@ comptime {
         \\  mov %cr2, %eax
         \\  push %eax
         \\
-        \\  mov $0x10, %ax 
+        \\  mov $0x10, %ax
         \\  mov %ax, %ds
         \\  mov %ax, %es
         \\  mov %ax, %fs
         \\  mov %ax, %gs
-        \\
-        \\  push %esp  
-        \\
-        \\  cmp $1, %ebx
+        \\  push %esp
+        \\  cmp $0, %ebx
         \\  je isr
-        \\  call isqHandler
+        \\  call irqHandler
         \\  jmp skip
+        \\
         \\ isr:
         \\  call isrHandler
         \\
         \\skip:
-        //; pop old which was used to check if isr or isq
-        \\  pop %ebx 
-        \\  add $4, %esp 
-        \\  pop %eax     
+        \\  add $8, %esp
+        \\  pop %eax
         \\  mov %ax, %ds
         \\  mov %ax, %es
         \\  mov %ax, %fs
         \\  mov %ax, %gs
-        \\
         \\  popa
-        \\  add $8, %esp   
+        \\  add $8, %esp
         \\  sti
         \\  iret
     );
