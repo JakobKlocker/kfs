@@ -8,12 +8,13 @@ const GDT = @import("gdt.zig");
 
 export fn kernel_main() noreturn {
     GDT.gdt.init();
-    console.clear();
+    console.clear(0);
     console.setColor(VGA.White, VGA.Black);
+    console.setActiveBuffer(0) catch unreachable;
     console.write("Hello, World!");
 
     while (true) {
-        const c = keyboard.getChar(keyboardLayout);
+        const c = keyboard.getASCII(keyboardLayout);
         console.putChar(c);
     }
 }
