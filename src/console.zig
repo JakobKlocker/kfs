@@ -26,22 +26,20 @@ pub const Console = struct {
     const HEIGHT = 25;
     const BUFFERS = 8;
 
-    var buffer: [BUFFERS][HISTORY][WIDTH]u16 = undefined;
+    var buffer: [BUFFERS][HISTORY * WIDTH]u16 = undefined;
     var activ_buffer: usize = 0;
     var col = [_]usize{0} ** BUFFERS;
-    var row = [_]usize{0} ** BUFFERS;
     var color: u16 = 0;
 
     var offset: usize = 0;
 
-    pub fn clear(buf: usize) void {
+    pub fn clear() void {
         for (0..HISTORY) |height| {
             for (0..WIDTH) |width| {
-                buffer[buf][height][width] = 0;
+                buffer[activ_buffer][height * WIDTH + width] = 0;
             }
         }
-        col[buf] = 0;
-        row[buf] = 0;
+        col[activ_buffer] = 0;
     }
 
     pub fn setColor(char_color: VGA_COLOR, background_color: VGA_COLOR) void {
@@ -55,43 +53,95 @@ pub const Console = struct {
         try renderBuffer(activ_buffer);
     }
 
-    pub fn renderBuffer(buf: usize) !void {
+    fn renderBuffer(buf: usize) !void {
         if (buf >= BUFFERS) return error.BUFFER_ERROR;
-        if (row[buf] < 25) {
-            for (0..row[buf] + 1) |r| {
-                for (0..WIDTH) |c| {
-                    VGABUFFER[r * WIDTH + c] = buffer[buf][r][c];
-                }
-            }
-        } else {
-            offset = row[buf] - 24;
+        var row = col[buf] / WIDTH;
+        offset = 0;
+        if (row >= HEIGHT)
+            offset = row - (HEIGHT - 1);
 
-            for (0..HEIGHT) |r| {
-                for (0..WIDTH) |c| {
-                    VGABUFFER[r * WIDTH + c] = buffer[buf][r + offset][c];
-                }
+        for (0..HEIGHT) |r| {
+            for (0..WIDTH) |c| {
+                VGABUFFER[r * WIDTH + c] = buffer[buf][(r + offset) * WIDTH + c];
             }
         }
-        setCursorPosition(@intCast(row[buf] * WIDTH + col[buf]));
+        if (row >= HEIGHT)
+            row = HEIGHT - 1;
+        setCursorPosition(@intCast(row * WIDTH + (col[buf] % WIDTH)));
     }
 
+    fn specialChars(char: u8) void {
+        const buf = activ_buffer;
+        const row = col[buf] / WIDTH;
+        if (char == 0x08) {
+            if (col[buf] == 0) return;
+
+            col[buf] -= 1;
+            buffer[buf][row * WIDTH + (col[buf] % WIDTH)] = 0;
+            renderBuffer(buf) catch unreachable; // todo: check last char when deleting
+            return ;
+        }
+        
+        if (char == '\n') {
+            col[buf] += WIDTH - (col[buf] % WIDTH);
+            if (col[buf] >= HISTORY * WIDTH)
+                col[buf] = 0;
+            renderBuffer(buf) catch unreachable;
+            return ;
+        }
+    }
+
+    fn putChar(char: u8) void {
+        const buf = activ_buffer;
+        const row = col[buf] / WIDTH;
+
+        specialChars(char);
+        if (char < 32 or char > 126) return ; // allow only printable ascii charaters to be printed to the screen
+
+        const c: u16 = char | color;
+        buffer[buf][row * WIDTH + (col[buf] % WIDTH)] = c;
+
+        renderBuffer(buf) catch unreachable;
+
+        col[buf] += 1;
+        if (col[buf] >= HISTORY * WIDTH) {
+            col[buf] = 0;
+        }
+    }
+
+    pub fn write(str: []const u8) void {
+        for (str) |c| {
+            putChar(c);
+        }
+    }
+
+    fn setCursorPosition(pos: u16) void {
+        ports.outb(0x3D4, 14);
+        ports.outb(0x3D5, @intCast(pos >> 8));
+
+        // Send the low byte of the cursor position
+        ports.outb(0x3D4, 15);
+        ports.outb(0x3D5, @intCast(pos & 0xFF));
+    }
+ 
     pub fn scrollUp() void {
         if (offset <= 1) offset = 1;
         offset -= 1;
         for (0..HEIGHT) |r| {
             for (0..WIDTH) |c| {
-                VGABUFFER[r * WIDTH + c] = buffer[activ_buffer][r + offset][c];
+                VGABUFFER[r * WIDTH + c] = buffer[activ_buffer][(r + offset) * WIDTH + c];
             }
         }
     }
 
     pub fn scrollDown() void {
-        if (row[activ_buffer] < 25) return;
+        const row = col[activ_buffer] / WIDTH;
+        if (row < 25) return;
         offset += 1;
-        if (offset >= row[activ_buffer] - 24) offset = row[activ_buffer] - 24;
+        if (offset >= row - 24) offset = row - 24;
         for (0..HEIGHT) |r| {
             for (0..WIDTH) |c| {
-                VGABUFFER[r * WIDTH + c] = buffer[activ_buffer][r + offset][c];
+                VGABUFFER[r * WIDTH + c] = buffer[activ_buffer][(r + offset) * WIDTH + c];
             }
         }
     }
@@ -113,55 +163,4 @@ pub const Console = struct {
         }
         renderBuffer(activ_buffer) catch unreachable;
     }
-
-    pub fn putChar(char: u8) void {
-        const buf = activ_buffer;
-
-        if (char == 0x08) { // todo: check for underflow
-            col[buf] -= 1;
-            buffer[buf][row[buf]][col[buf]] = 0;
-            renderBuffer(buf) catch unreachable;
-            return ;
-        }
-        
-        if (char == '\n') { // todo: check for overflow
-            col[buf] = 0;
-            row[buf] += 1;
-            renderBuffer(buf) catch unreachable;
-            return ;
-        }
-
-        if (char < ' ' or char > 126) return ; // allow only printable ascii charaters to be printed to the screen
-
-        const c: u16 = char | color;
-        buffer[buf][row[buf]][col[buf]] = c;
-
-        renderBuffer(buf) catch unreachable;
-
-        col[buf] += 1;
-        if (col[buf] >= WIDTH) {
-            col[buf] = 0;
-            row[buf] += 1;
-        }
-
-        if (row[buf] >= HISTORY) {
-            row[buf] = 0;
-        }
-    }
-
-    pub fn write(str: []const u8) void {
-        for (str) |c| {
-            putChar(c);
-        }
-    }
-
-    pub fn setCursorPosition(pos: u16) void {
-        ports.outb(0x3D4, 14);
-        ports.outb(0x3D5, @intCast(pos >> 8));
-
-        // Send the low byte of the cursor position
-        ports.outb(0x3D4, 15);
-        ports.outb(0x3D5, @intCast(pos & 0xFF));
-    }
-
 };
