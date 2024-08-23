@@ -72,13 +72,12 @@ pub const Console = struct {
 
     fn specialChars(char: u8) void {
         const buf = activ_buffer;
-        const row = col[buf] / WIDTH;
         if (char == 0x08) {
             if (col[buf] == 0) return;
 
-            col[buf] -= 1;
-            buffer[buf][row * WIDTH + (col[buf] % WIDTH)] = 0;
-            renderBuffer(buf) catch unreachable; // todo: check last char when deleting
+            while (buffer[buf][col[buf]] == 0) col[buf] -= 1;
+            buffer[buf][col[buf]] = 0;
+            renderBuffer(buf) catch unreachable;
             return ;
         }
         
