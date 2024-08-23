@@ -12,11 +12,11 @@ export fn kernel_main() noreturn {
     console.clear();
     console.setColor(VGA.White, VGA.Black);
     console.setActiveBuffer(0) catch unreachable;
-    print("{}", .{12000000000000000000000000000000000});
+    print("{c}", .{"Hello, World!"});
 
     while (true) {
         const c = keyboard.getASCII(keyboardLayout);
-        print("{}", .{c});
+        print("{c}", .{c});
     }
 }
 
