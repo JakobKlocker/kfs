@@ -78,6 +78,8 @@ pub const Console = struct {
             while (buffer[buf][col[buf]] == 0) col[buf] -= 1;
             buffer[buf][col[buf]] = 0;
             renderBuffer(buf) catch unreachable;
+            if (col[buf] != 0)
+                setCursorPosition(@intCast(col[buf] - 1));
             return ;
         }
         

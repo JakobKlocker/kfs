@@ -96,6 +96,7 @@ pub fn print(comptime format:  []const u8, args: anytype) void {
                         handelChars(args[arg_index])
                     else
                         handleTypes(args[arg_index]);
+                    printChar = false;
                     arg_index += 1;
                     state = State.start;
                     index = i + 1;

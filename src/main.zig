@@ -13,13 +13,15 @@ export fn kernel_main() void {
     PIC.remapPic();
     IDT.idt.init();
     console.clear();
-    console.setColor(VGA.White, VGA.Black);
     console.setActiveBuffer(0) catch unreachable;
-    print("{c}", .{"Hello, World!"});
+    console.setColor(VGA.DarkGray, VGA.Black);
+    print("{c}", .{"4"});
+    console.setColor(VGA.LightCyan, VGA.Black);
+    print("{c}", .{"2"});
+    console.setColor(VGA.White, VGA.Black);
 
     while (true) {
-        const c = keyboard.getASCII(keyboardLayout);
-        print("{c}", .{c});
+        port.io_wait();
     }
 }
 
