@@ -7,8 +7,6 @@ all:
 	grub-mkrescue -o kernel.iso .
 	qemu-system-i386 -cdrom kernel.iso #-d int,cpu_reset -no-reboot
 
-
-
 debug:
 	rm -rf kernel.iso
 	zig build -Dtarget=x86-freestanding --release=off
