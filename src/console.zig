@@ -85,6 +85,7 @@ pub const Console = struct {
             col[buf] += WIDTH - (col[buf] % WIDTH);
             if (col[buf] >= HISTORY * WIDTH)
                 col[buf] = 0;
+            buffer[buf][col[buf]] = '\n';
             renderBuffer(buf) catch unreachable;
             return ;
         }
@@ -94,7 +95,7 @@ pub const Console = struct {
         const buf = activ_buffer;
         const row = col[buf] / WIDTH;
 
-        specialChars(char);
+        specialChars(char); // handel special character like enter and delte
         if (char < 32 or char > 126) return ; // allow only printable ascii charaters to be printed to the screen
 
         const c: u16 = char | color;
