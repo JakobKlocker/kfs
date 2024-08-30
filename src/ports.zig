@@ -11,7 +11,7 @@ pub inline fn outb(port: u16, value: u8) void {
 pub inline fn inb(port: u16) u8 {
     return asm volatile ("inb %[port], %[value]"
         : [value] "={al}" (-> u8),
-          [port] "N{dx}" (port),
+        : [port] "N{dx}" (port),
     );
 }
 

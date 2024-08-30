@@ -1,4 +1,7 @@
 const ports = @import("ports.zig");
+const keyboard = @import("keyboard.zig").Keyboard;
+const keyboardLayout = @import("keyboard.zig").@"us QWERTY";
+const print = @import("print.zig").print;
 
 extern fn isr0() void;
 extern fn isr1() void;
@@ -160,23 +163,14 @@ pub const idt = struct {
 
         //flush idt
         idtFlush(&idt_descriptor);
-        irqInstallHandler(1, &keyboard_isr);
+        irqInstallHandler(1, &keyboard_irq);
     }
 };
 
-var t: u32 = 0;
-pub fn keyboard_isr(regs: *InterruptRegs) void {
-    if (regs.eax == 1) {
-        vga.Console.write("eax exists \n");
-    }
-    vga.Console.clear();
-
-    if (t == 0) {
-        vga.Console.write("key pressed");
-    } else {
-        vga.Console.write("often");
-    }
-    t += 1;
+fn keyboard_irq(regs: *InterruptRegs) void { // todo: check at kfs4 again
+    _ = regs;
+    const c = keyboard.getASCII(keyboardLayout);
+    print("{c}", .{c});
 }
 
 pub inline fn idtFlush(idtr: *IDT_DESCRIPTOR) void {
@@ -211,7 +205,7 @@ export fn irqHandler(regs: *InterruptRegs) void {
     if (regs.int_no >= 40)
         ports.outb(0xA0, 0x20);
     ports.outb(0x20, 0x20);
-    vga.Console.write("called");
+    // vga.Console.write("called");
 }
 
 pub fn irqInstallHandler(irq: usize, handler: *const fn (*InterruptRegs) void) void {
