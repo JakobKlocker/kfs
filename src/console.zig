@@ -1,4 +1,5 @@
 const ports = @import("ports.zig");
+const print = @import("print.zig").print;
 
 pub const VGA_COLOR = enum(u8) {
     Black = 0,
@@ -80,16 +81,17 @@ pub const Console = struct {
             renderBuffer(buf) catch unreachable;
             if (col[buf] != 0)
                 setCursorPosition(@intCast(col[buf] - 1));
-            return ;
+            return;
         }
-        
+
         if (char == '\n') {
+            getCmd();
             col[buf] += WIDTH - (col[buf] % WIDTH);
             if (col[buf] >= HISTORY * WIDTH)
                 col[buf] = 0;
             buffer[buf][col[buf]] = '\n';
             renderBuffer(buf) catch unreachable;
-            return ;
+            return;
         }
     }
 
@@ -98,11 +100,10 @@ pub const Console = struct {
         const row = col[buf] / WIDTH;
 
         specialChars(char); // handel special character like enter and delte
-        if (char < 32 or char > 126) return ; // allow only printable ascii charaters to be printed to the screen
+        if (char < 32 or char > 126) return; // allow only printable ascii charaters to be printed to the screen
 
         const c: u16 = char | color;
         buffer[buf][row * WIDTH + (col[buf] % WIDTH)] = c;
-
         renderBuffer(buf) catch unreachable;
 
         col[buf] += 1;
@@ -125,7 +126,7 @@ pub const Console = struct {
         ports.outb(0x3D4, 15);
         ports.outb(0x3D5, @intCast(pos & 0xFF));
     }
- 
+
     pub fn scrollUp() void {
         if (offset <= 1) offset = 1;
         offset -= 1;
@@ -164,5 +165,20 @@ pub const Console = struct {
             activ_buffer -= 1;
         }
         renderBuffer(activ_buffer) catch unreachable;
+    }
+
+    pub fn getCmd() void {
+        const buf = activ_buffer;
+        const row = col[buf] / WIDTH;
+        const size = col[buf] % WIDTH;
+
+        const start_index = row * WIDTH;
+        const end_index = start_index + size + 1; // end_index is inclusive
+
+        const cmd_slice = buffer[buf][start_index..end_index];
+
+        for (0..size) |i| {
+            putChar(@truncate(cmd_slice[i]));
+        }
     }
 };

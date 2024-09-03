@@ -72,7 +72,7 @@ pub fn print(comptime format:  []const u8, args: anytype) void {
     comptime var arg_index: usize = 0;
     comptime var index: usize = 0;
     comptime var printChar: bool = false;
-
+    
     inline for (format, 0..) |c, i| {
         switch (state) {
             State.start => switch (c) {
