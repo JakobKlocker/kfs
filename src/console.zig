@@ -72,7 +72,7 @@ pub const Console = struct {
 
     fn specialChars(char: u8) void {
         const buf = activ_buffer;
-        if (char == 0x08) {
+        if (char == 0x08) { // this is for deleting a character in the console
             if (col[buf] == 0) return;
 
             while (buffer[buf][col[buf]] == 0) col[buf] -= 1;

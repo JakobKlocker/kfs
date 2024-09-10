@@ -1,6 +1,7 @@
 .extern kernel_main
 
 .global _start
+.global stack_top
  
 
 .set MB_MAGIC, 0x1BADB002          // This is a 'magic' constant that GRUB will use to detect our kernel's location.
@@ -12,7 +13,7 @@
 	.long MB_MAGIC
 	.long MB_FLAGS
 	.long MB_CHECKSUM
- 
+
 .section .bss
 
 	.align 16

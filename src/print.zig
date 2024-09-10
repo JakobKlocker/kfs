@@ -72,6 +72,7 @@ pub fn print(comptime format:  []const u8, args: anytype) void {
     comptime var arg_index: usize = 0;
     comptime var index: usize = 0;
     comptime var printChar: bool = false;
+    comptime var printhex: bool = false;
 
     inline for (format, 0..) |c, i| {
         switch (state) {
@@ -94,14 +95,18 @@ pub fn print(comptime format:  []const u8, args: anytype) void {
                 '}' => {
                     if (printChar)
                         handelChars(args[arg_index])
+                    else if (printhex) 
+                        printHex(args[arg_index])
                     else
                         handleTypes(args[arg_index]);
                     printChar = false;
+                    printhex = false;
                     arg_index += 1;
                     state = State.start;
                     index = i + 1;
                 },
                 'c' => printChar = true,
+                'x' => printhex = true,
                 else => @compileError("Unknown format: " ++ [1]u8{c}),
             },
             State.close => switch (c) {
@@ -126,3 +131,63 @@ pub fn print(comptime format:  []const u8, args: anytype) void {
     }
 }
 
+pub fn hexdump(address: [*]const u8, size: usize) void {
+    const rows = size / 16;
+    
+    for (0..rows + 1) |i| {
+        print("\n0x{x}", .{16 * i + @intFromPtr(address)});
+
+        for (0..8) |j| {
+            print(" ", .{});
+
+            for (0..2) |k| {
+                if (16 * i + j + k > size) {
+                    print("  ", .{});
+                }
+                else if (address[16 * i + j + k] > 15)
+                    print("{x}", .{address[16 * i + j + k]})
+                else 
+                    print("0{x}", .{address[16 * i + j + k]});
+            }
+        }
+
+        print(" ", .{});
+        for (0..16) |j| {
+            if (16 * i + j > size)
+                continue;
+            if (address[16 * i + j] < 32 or address[16 * i + j] > 126)
+                print(".", .{})
+            else
+                print("{c}", .{address[16 * i + j]});
+        }
+    }
+    print("\n", .{});
+}
+
+pub fn printStack() void {
+    const bottom = getStackBottom();
+    const top = readRegisterESP();
+    const diff = bottom - top;
+    hexdump(@ptrFromInt(top), diff);
+}
+
+extern fn readRegisterESP() usize; comptime {
+    asm (
+        \\.global readRegisterESP
+        \\.type readRegisterESP, @function;
+        \\readRegisterESP:
+        \\  mov %esp, %eax
+        \\  ret
+    );
+}
+
+extern fn getStackBottom() usize; comptime {
+    asm (
+        \\.global getStackBottom
+        \\.extern stack_top
+        \\.type getStackBottom, @function;
+        \\getStackBottom:
+        \\  mov $stack_top, %eax
+        \\  ret
+    );
+}
