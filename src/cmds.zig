@@ -16,7 +16,7 @@ pub const cmds = struct {
         port.outb(0x64, 0xFE);
         asm volatile ("hlt");
     }
-
+    //https://wiki.osdev.org/Shutdown
     pub fn shutdown() void {
         port.outw(0x604, 0x2000);
     }
