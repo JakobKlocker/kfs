@@ -1,6 +1,7 @@
 const ports = @import("ports.zig");
 const print = @import("print.zig").print;
 const cmds = @import("cmds.zig").cmds;
+const string = @import("string.zig");
 
 pub const VGA_COLOR = enum(u8) {
     Black = 0,
@@ -86,8 +87,7 @@ pub const Console = struct {
         }
 
         if (char == '\n') {
-            //getCmd(); latter on to get the cmd
-            cmds.halt();
+            getCmd();
             col[buf] += WIDTH - (col[buf] % WIDTH);
             if (col[buf] >= HISTORY * WIDTH)
                 col[buf] = 0;
@@ -175,15 +175,27 @@ pub const Console = struct {
         const size = col[buf] % WIDTH;
 
         const start_index = row * WIDTH;
-        const end_index = start_index + size + 1; // end_index is inclusive
+        const end_index = start_index + size + 1;
 
         const cmd_with_color = buffer[buf][start_index..end_index];
-        const cmd = bufferCmdToStr(cmd_with_color);
-        write(cmd);
+        const cmd: []const u8 = bufferCmdToStr(cmd_with_color);
+
+        _ = cmd;
+        if (string.strcmp("reboot", "reboot")) {
+            putChar('a');
+        }
+
+        // if (string.strcmp(cmd, "reboot")) {
+        //     cmds.reboot();
+        // } else if (string.strcmp(cmd, "shutdown")) {
+        //     cmds.shutdown();
+        // } else if (string.strcmp(cmd, "halt")) {
+        //     cmds.halt();
+        // }
     }
 
     pub fn bufferCmdToStr(buffer_cmd: []u16) []u8 {
-        var ret: [5]u8 = undefined; // if this is too big, divison by zero happening. Check if buffer_cmd is too big before
+        var ret: [15]u8 = undefined; // if this is too big, divison by zero happening. Check if buffer_cmd is too big before
         var size: usize = 0;
 
         while (size < buffer_cmd.len) {
@@ -191,6 +203,6 @@ pub const Console = struct {
             size += 1;
         }
         ret[size] = 0;
-        return ret[0..size];
+        return &ret;
     }
 };

@@ -1,7 +1,13 @@
 const port = @import("ports.zig");
 
-//8042 reset: https://wiki.osdev.org/Reboot
+const Command = enum {
+    Reboot,
+    Shutdown,
+    Halt,
+};
+
 pub const cmds = struct {
+    //8042 reset: https://wiki.osdev.org/Reboot
     pub fn reboot() void {
         var good: u8 = 0x02;
         while (good & 0x02 != 0) {
