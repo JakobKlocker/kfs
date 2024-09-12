@@ -95,7 +95,6 @@ const IDT_ENTRY = packed struct {
 const IDT_SIZE = 256;
 
 var idt_entires: [IDT_SIZE]IDT_ENTRY = undefined;
-
 var idt_descriptor = IDT_DESCRIPTOR{ .base = 0, .limit = 0 };
 
 pub const idt = struct {

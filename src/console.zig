@@ -1,5 +1,6 @@
 const ports = @import("ports.zig");
 const print = @import("print.zig").print;
+const cmds = @import("cmds.zig").cmds;
 
 pub const VGA_COLOR = enum(u8) {
     Black = 0,
@@ -85,7 +86,8 @@ pub const Console = struct {
         }
 
         if (char == '\n') {
-            getCmd();
+            //getCmd(); latter on to get the cmd
+            cmds.halt();
             col[buf] += WIDTH - (col[buf] % WIDTH);
             if (col[buf] >= HISTORY * WIDTH)
                 col[buf] = 0;
@@ -175,34 +177,20 @@ pub const Console = struct {
         const start_index = row * WIDTH;
         const end_index = start_index + size + 1; // end_index is inclusive
 
-        const cmd_slice = buffer[buf][start_index..end_index];
-
-        // for (0..size) |i| {
-        //     putChar(@truncate(cmd_slice[i]));
-        // }
-        // if(bufferCmdToStr(cmd_slice) == "reboot")
-        // {
-
-        // }
-
-        const u = bufferCmdToStr(cmd_slice);
-        _ = u;
-
-        // for (0..str.len) |i| {
-        //     putChar(str[i]);
-        // }
+        const cmd_with_color = buffer[buf][start_index..end_index];
+        const cmd = bufferCmdToStr(cmd_with_color);
+        write(cmd);
     }
 
-    pub fn bufferCmdToStr(buffer_cmd: []u16) usize {
-        _ = buffer_cmd;
+    pub fn bufferCmdToStr(buffer_cmd: []u16) []u8 {
+        var ret: [5]u8 = undefined; // if this is too big, divison by zero happening. Check if buffer_cmd is too big before
+        var size: usize = 0;
 
-        var rest: [30]u8 = undefined; // if this is small enough, I dont get teh diviosn by zero
-
-        const asd: u8 = 'c';
-
-        for (&rest) |*entry| {
-            entry.* = asd;
+        while (size < buffer_cmd.len) {
+            ret[size] = @truncate(buffer_cmd[size]);
+            size += 1;
         }
-        return 3; // Random for now, testing the crash
+        ret[size] = 0;
+        return ret[0..size];
     }
 };

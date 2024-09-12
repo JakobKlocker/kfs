@@ -24,4 +24,3 @@ export fn kernel_main() void {
         port.io_wait();
     }
 }
-
