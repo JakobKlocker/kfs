@@ -177,8 +177,32 @@ pub const Console = struct {
 
         const cmd_slice = buffer[buf][start_index..end_index];
 
-        for (0..size) |i| {
-            putChar(@truncate(cmd_slice[i]));
+        // for (0..size) |i| {
+        //     putChar(@truncate(cmd_slice[i]));
+        // }
+        // if(bufferCmdToStr(cmd_slice) == "reboot")
+        // {
+
+        // }
+
+        const u = bufferCmdToStr(cmd_slice);
+        _ = u;
+
+        // for (0..str.len) |i| {
+        //     putChar(str[i]);
+        // }
+    }
+
+    pub fn bufferCmdToStr(buffer_cmd: []u16) usize {
+        _ = buffer_cmd;
+
+        var rest: [30]u8 = undefined; // if this is small enough, I dont get teh diviosn by zero
+
+        const asd: u8 = 'c';
+
+        for (&rest) |*entry| {
+            entry.* = asd;
         }
+        return 3; // Random for now, testing the crash
     }
 };
