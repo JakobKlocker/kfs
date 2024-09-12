@@ -4,25 +4,20 @@ pub fn strlen(str: [*]u8) usize {
     return len;
 }
 
+//Find solution for this, can't compare .len because one could be 255 (like cmd) yet still smaller
+//can't compare null byte because it doesnt exist
 pub fn strcmp(s1: []const u8, s2: []const u8) bool {
     var i: usize = 0;
 
-    if (s1.len != s2.len)
-        return false;
-    while (i < s1.len) {
+    // if (s1.len != s2.len)
+    //     return false;
+    while (s1.len < i and s2.len < i) {
+        // while (s1[i] != 0 and s1[2] != 0) {
         if (s1[i] != s2[i])
             return false;
         i += 1;
     }
+    if (s1[i] != s2[i])
+        return false;
     return true;
 }
-
-// pub fn strcmp(s1: [*]u8, s2: [*]u8) i32 {
-//     var i: usize = 0;
-//     while (s1[i] != 0 and s2[i] != 0) : (i += 1) {
-//         if (s1[i] != s2[i]) {
-//             return s1[i] - s2[i];
-//         }
-//     }
-//     return s1[i] - s2[i];
-// }

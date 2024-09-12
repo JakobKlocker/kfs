@@ -36,6 +36,8 @@ pub const Console = struct {
 
     var offset: usize = 0;
 
+    var cmd: [255]u8 = undefined;
+
     pub fn clear() void {
         for (0..HISTORY) |height| {
             for (0..WIDTH) |width| {
@@ -178,31 +180,23 @@ pub const Console = struct {
         const end_index = start_index + size + 1;
 
         const cmd_with_color = buffer[buf][start_index..end_index];
-        const cmd: []const u8 = bufferCmdToStr(cmd_with_color);
-
-        _ = cmd;
-        if (string.strcmp("reboot", "reboot")) {
-            putChar('a');
+        bufferCmdToStr(cmd_with_color);
+        if (string.strcmp(@constCast(&cmd), "reboot")) {
+            cmds.reboot();
+        } else if (string.strcmp(@constCast(&cmd), "shutdown")) {
+            cmds.shutdown();
+        } else if (string.strcmp(@constCast(&cmd), "halt")) {
+            cmds.halt();
         }
-
-        // if (string.strcmp(cmd, "reboot")) {
-        //     cmds.reboot();
-        // } else if (string.strcmp(cmd, "shutdown")) {
-        //     cmds.shutdown();
-        // } else if (string.strcmp(cmd, "halt")) {
-        //     cmds.halt();
-        // }
     }
 
-    pub fn bufferCmdToStr(buffer_cmd: []u16) []u8 {
-        var ret: [15]u8 = undefined; // if this is too big, divison by zero happening. Check if buffer_cmd is too big before
+    pub fn bufferCmdToStr(buffer_cmd: []u16) void {
         var size: usize = 0;
 
         while (size < buffer_cmd.len) {
-            ret[size] = @truncate(buffer_cmd[size]);
+            cmd[size] = @truncate(buffer_cmd[size]);
             size += 1;
         }
-        ret[size] = 0;
-        return &ret;
+        cmd[size] = 0;
     }
 };
