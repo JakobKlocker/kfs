@@ -132,33 +132,34 @@ pub fn print(comptime format:  []const u8, args: anytype) void {
 }
 
 pub fn hexdump(address: [*]const u8, size: usize) void {
-    const rows = size / 16;
+    const WIDTH = 16;
+    const rows = size / WIDTH;
     
     for (0..rows + 1) |i| {
-        print("\n0x{x}", .{16 * i + @intFromPtr(address)});
+        print("\n0x{x}", .{WIDTH * i + @intFromPtr(address)});
 
         for (0..8) |j| {
             print(" ", .{});
 
             for (0..2) |k| {
-                if (16 * i + j + k > size) {
+                if (WIDTH * i + j * 2 + k > size) {
                     print("  ", .{});
                 }
-                else if (address[16 * i + j + k] > 15)
-                    print("{x}", .{address[16 * i + j + k]})
+                else if (address[WIDTH * i + j * 2 + k] > 15)
+                    print("{x}", .{address[WIDTH * i + j * 2 + k]})
                 else 
-                    print("0{x}", .{address[16 * i + j + k]});
+                    print("0{x}", .{address[WIDTH * i + j * 2 + k]});
             }
         }
 
         print(" ", .{});
-        for (0..16) |j| {
-            if (16 * i + j > size)
+        for (0..WIDTH ) |j| {
+            if (WIDTH * i + j > size)
                 continue;
-            if (address[16 * i + j] < 32 or address[16 * i + j] > 126)
+            if (address[WIDTH * i + j] < 32 or address[WIDTH * i + j] > 126)
                 print(".", .{})
             else
-                print("{c}", .{address[16 * i + j]});
+                print("{c}", .{address[WIDTH * i + j]});
         }
     }
     print("\n", .{});
