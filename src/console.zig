@@ -79,6 +79,7 @@ pub const Console = struct {
         const buf = activ_buffer;
         if (char == 0x08) {
             if (col[buf] == 0) return;
+            if (col[buf] % WIDTH == 0) return;
 
             while (buffer[buf][col[buf]] == 0) col[buf] -= 1;
             buffer[buf][col[buf]] = 0;
@@ -114,6 +115,16 @@ pub const Console = struct {
         if (col[buf] >= HISTORY * WIDTH) {
             col[buf] = 0;
         }
+    }
+
+    fn newLine() void {
+        const buf = activ_buffer;
+        col[buf] += WIDTH - (col[buf] % WIDTH);
+        if (col[buf] >= HISTORY * WIDTH)
+            col[buf] = 0;
+        buffer[buf][col[buf]] = '\n';
+        renderBuffer(buf) catch unreachable;
+        return;
     }
 
     pub fn write(str: []const u8) void {
@@ -187,6 +198,11 @@ pub const Console = struct {
             cmds.shutdown();
         } else if (string.strcmp(@constCast(&cmd), "halt")) {
             cmds.halt();
+        } else if (string.strcmp(@constCast(&cmd), "stack")) {
+            //function to call printStack/hexdump
+        } else {
+            newLine();
+            write("function not found");
         }
     }
 

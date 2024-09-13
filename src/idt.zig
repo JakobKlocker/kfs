@@ -191,7 +191,9 @@ export fn isrHandler(regs: *InterruptRegs) void {
     if (regs.err_code < 32) {
         vga.Console.write(error_messages[regs.err_code]);
         vga.Console.write("System paused");
-        while (true) {}
+        //while (true) {}
+        asm volatile ("hlt");
+
     }
 }
 
