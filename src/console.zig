@@ -191,9 +191,13 @@ pub const Console = struct {
             print.printStack();
         } else if (string.strcmp(@constCast(&cmd), "clear")) {
             clear();
+            //clear needs input to actualy clear the text, so I write a 'a' and delete after
+            //find cleaner fix
+            putChar('a');
+            putChar(0x08);
         } else {
             setColor(VGA_COLOR.Black, VGA_COLOR.Red);
-            write("\nCommand not found");
+            write("\nCommand not found\n");
             setColor(VGA_COLOR.White, VGA_COLOR.Black);
         }
     }

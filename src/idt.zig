@@ -169,9 +169,11 @@ pub const idt = struct {
 fn keyboard_irq(regs: *InterruptRegs) void { // todo: check at kfs4 again
     _ = regs;
     const c = keyboard.getASCII(keyboardLayout);
-    if (c == '\n')
+    if (c == '\n') {
         console.getCmd();
-    print("{c}", .{c});
+    } else {
+        print("{c}", .{c});
+    }
 }
 
 pub inline fn idtFlush(idtr: *IDT_DESCRIPTOR) void {
