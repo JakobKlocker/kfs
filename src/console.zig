@@ -189,6 +189,8 @@ pub const Console = struct {
             cmds.halt();
         } else if (string.strcmp(@constCast(&cmd), "stack")) {
             print.printStack();
+        } else if (string.strcmp(@constCast(&cmd), "clear")) {
+            clear();
         } else {
             setColor(VGA_COLOR.Black, VGA_COLOR.Red);
             write("\nCommand not found");
