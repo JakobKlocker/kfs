@@ -1,5 +1,5 @@
 const ports = @import("ports.zig");
-const print = @import("print.zig").print;
+const print = @import("print.zig");
 const cmds = @import("cmds.zig").cmds;
 const string = @import("string.zig");
 
@@ -90,7 +90,6 @@ pub const Console = struct {
         }
 
         if (char == '\n') {
-            getCmd();
             col[buf] += WIDTH - (col[buf] % WIDTH);
             if (col[buf] >= HISTORY * WIDTH)
                 col[buf] = 0;
@@ -115,16 +114,6 @@ pub const Console = struct {
         if (col[buf] >= HISTORY * WIDTH) {
             col[buf] = 0;
         }
-    }
-
-    fn newLine() void {
-        const buf = activ_buffer;
-        col[buf] += WIDTH - (col[buf] % WIDTH);
-        if (col[buf] >= HISTORY * WIDTH)
-            col[buf] = 0;
-        buffer[buf][col[buf]] = '\n';
-        renderBuffer(buf) catch unreachable;
-        return;
     }
 
     pub fn write(str: []const u8) void {
@@ -199,10 +188,11 @@ pub const Console = struct {
         } else if (string.strcmp(@constCast(&cmd), "halt")) {
             cmds.halt();
         } else if (string.strcmp(@constCast(&cmd), "stack")) {
-            //function to call printStack/hexdump
+            print.printStack();
         } else {
-            newLine();
-            write("function not found");
+            setColor(VGA_COLOR.Black, VGA_COLOR.Red);
+            write("\nCommand not found");
+            setColor(VGA_COLOR.White, VGA_COLOR.Black);
         }
     }
 

@@ -21,8 +21,6 @@ export fn kernel_main() void {
     print("{c}", .{"2"});
     console.setColor(VGA.White, VGA.Black);
 
-    printStack();
-
     while (true) {
         port.io_wait();
     }

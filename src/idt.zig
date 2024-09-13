@@ -169,6 +169,8 @@ pub const idt = struct {
 fn keyboard_irq(regs: *InterruptRegs) void { // todo: check at kfs4 again
     _ = regs;
     const c = keyboard.getASCII(keyboardLayout);
+    if (c == '\n')
+        console.getCmd();
     print("{c}", .{c});
 }
 
@@ -193,7 +195,6 @@ export fn isrHandler(regs: *InterruptRegs) void {
         vga.Console.write("System paused");
         //while (true) {}
         asm volatile ("hlt");
-
     }
 }
 
