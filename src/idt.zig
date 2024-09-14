@@ -95,7 +95,6 @@ const IDT_ENTRY = packed struct {
 const IDT_SIZE = 256;
 
 var idt_entires: [IDT_SIZE]IDT_ENTRY = undefined;
-
 var idt_descriptor = IDT_DESCRIPTOR{ .base = 0, .limit = 0 };
 
 pub const idt = struct {
@@ -170,7 +169,11 @@ pub const idt = struct {
 fn keyboard_irq(regs: *InterruptRegs) void { // todo: check at kfs4 again
     _ = regs;
     const c = keyboard.getASCII(keyboardLayout);
-    print("{c}", .{c});
+    if (c == '\n') {
+        console.getCmd();
+    } else {
+        print("{c}", .{c});
+    }
 }
 
 pub inline fn idtFlush(idtr: *IDT_DESCRIPTOR) void {
@@ -192,7 +195,8 @@ export fn isrHandler(regs: *InterruptRegs) void {
     if (regs.err_code < 32) {
         vga.Console.write(error_messages[regs.err_code]);
         vga.Console.write("System paused");
-        while (true) {}
+        //while (true) {}
+        asm volatile ("hlt");
     }
 }
 

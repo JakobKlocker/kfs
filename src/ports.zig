@@ -19,3 +19,12 @@ pub inline fn inb(port: u16) u8 {
 pub inline fn io_wait() void {
     outb(0x80, 0);
 }
+
+// Function to write a byte to specific port but wide
+pub inline fn outw(port: u16, value: u16) void {
+    asm volatile ("outw %[value], %[port]"
+        :
+        : [value] "{al}" (value),
+          [port] "{dx}" (port),
+    );
+}
