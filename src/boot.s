@@ -28,10 +28,10 @@
 
 	.align 16
 	stack_bottom:
-		.skip 16384
+		.skip 4096
 	stack_top:
  
-.section .boot
+.section .text
 	_start:
 
 		mov $stack_top, %esp
@@ -42,9 +42,3 @@
 			cli      // Disable CPU interrupts
 			hlt      // Halt the CPU
 			jmp hang // If that didn't work, loop around and try again.
-
-.section .data
-.align 4096
-.global init_page_dir
-init_page_dir:
-	.quad 0x10000011b // Using 64 bit now since wont work with .long, in tut it said dd. Have to look into that
