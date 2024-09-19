@@ -4,7 +4,12 @@
 
 const PAGES_SIZE = 4096;
 const PAGES_PER_TABLE = 1024;
-const TABLES_PER_DIR = 1024;
+const PAGES_PER_DIR = 1024;
+const PTABLE_ADDR_SPACE_SIZE = 0x400000;
+const DTABLE_ADDR_SPACE_SIZE = 0x100000000;
+
+const pt_entry: [PAGES_PER_TABLE]u32 = undefined;
+const pd_entry: [PAGES_PER_DIR]u32 = undefined;
 
 //https://wiki.osdev.org/images/6/60/Page_table_entry.png
 const PAGE_PTE_FLAGS = packed struct(u32) {
@@ -38,6 +43,35 @@ const PAGE_PDE_FLAGS = packed struct(u32) {
 const myTest = PAGE_PTE_FLAGS{
     .PTE_ACCESSED = 1,
 };
+
+fn page_directory_index(virtual_addr: u32) u32 {
+    return (virtual_addr >> 22) & 0x3FF;
+}
+
+fn page_table_index(virtual_addr: u32) u32 {
+    return (virtual_addr >> 12) & 0x3FF;
+}
+
+fn get_physical_address(pte: u32) u32 {
+    return pte & ~0xFFF;
+}
+
+
+// below from writeup http://www.brokenthorn.com/Resources/OSDev18.html, need p mem allocator to continue
+fn pmmngr_alloc_block() 
+fn vmmngr_alloc_page (e: * pt_entry) bool {
+ 
+	//! allocate a free physical frame
+	p = pmmngr_alloc_block ();
+	if (!p)
+		return false;
+ 
+	//! map it to the page
+	pt_entry_set_frame (e, (physical_addr)p);
+	pt_entry_add_attrib (e, I86_PTE_PRESENT);
+
+	return true;
+}
 
 // extern void		pd_entry_add_attrib (pd_entry* e, uint32_t attrib);
 // extern void		pd_entry_del_attrib (pd_entry* e, uint32_t attrib);
