@@ -8,6 +8,7 @@ const print = @import("print.zig").print;
 const printStack = @import("print.zig").printStack;
 const IDT = @import("idt.zig");
 const PIC = @import("pic.zig");
+const MEMORY = @import("memory.zig");
 
 export fn kernel_main() void {
     GDT.gdt.init();
@@ -20,6 +21,8 @@ export fn kernel_main() void {
     console.setColor(VGA.LightCyan, VGA.Black);
     print("{c}", .{"2"});
     console.setColor(VGA.White, VGA.Black);
+
+    _ = MEMORY.page_table_index(0x123);
 
     while (true) {
         port.io_wait();

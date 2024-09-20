@@ -8,11 +8,14 @@ const PAGES_PER_DIR = 1024;
 const PTABLE_ADDR_SPACE_SIZE = 0x400000;
 const DTABLE_ADDR_SPACE_SIZE = 0x100000000;
 
-const pt_entry: [PAGES_PER_TABLE]u32 = undefined;
-const pd_entry: [PAGES_PER_DIR]u32 = undefined;
+const page_table_entry: [PAGES_PER_TABLE]PAGE_PTE = undefined;
+const page_directory_entry: [PAGES_PER_DIR]PAGE_PDE = undefined;
+
+var current_page_directory: *[PAGES_PER_TABLE]PAGE_PDE = undefined;
+var current_physical_pd: PAGE_PDE = PAGE_PDE{};
 
 //https://wiki.osdev.org/images/6/60/Page_table_entry.png
-const PAGE_PTE_FLAGS = packed struct(u32) {
+const PAGE_PTE = packed struct(u32) {
     PTE_PRESENT: u1 = 0, // 1 bit for Present (P)
     PTE_WRITABLE: u1 = 0, // 1 bit for Read/Write (RW)
     PTE_USER: u1 = 0, // 1 bit for User/Supervisor (U/S)
@@ -27,7 +30,7 @@ const PAGE_PTE_FLAGS = packed struct(u32) {
 };
 
 //Page Directory Entry
-const PAGE_PDE_FLAGS = packed struct(u32) {
+const PAGE_PDE = packed struct(u32) {
     PTE_PRESENT: u1 = 0, // 1 bit for Present (P)
     PTE_WRITABLE: u1 = 0, // 1 bit for Read/Write (RW)
     PTE_USER: u1 = 0, // 1 bit for User/Supervisor (U/S)
@@ -40,45 +43,43 @@ const PAGE_PDE_FLAGS = packed struct(u32) {
     PTE_FRAME: u20 = 0, // 20 bits for the frame address (physical page)
 };
 
-const myTest = PAGE_PTE_FLAGS{
+const myTest = PAGE_PTE{
     .PTE_ACCESSED = 1,
 };
 
-fn page_directory_index(virtual_addr: u32) u32 {
+pub fn page_directory_index(virtual_addr: u32) u32 {
     return (virtual_addr >> 22) & 0x3FF;
 }
 
-fn page_table_index(virtual_addr: u32) u32 {
+pub fn page_table_index(virtual_addr: u32) u32 {
     return (virtual_addr >> 12) & 0x3FF;
 }
 
-fn get_physical_address(pte: u32) u32 {
+//clear lowest 12 bits, only return frame
+pub fn get_physical_address(pte: u32) u32 {
     return pte & ~0xFFF;
 }
 
-
-// below from writeup http://www.brokenthorn.com/Resources/OSDev18.html, need p mem allocator to continue
-fn pmmngr_alloc_block() 
-fn vmmngr_alloc_page (e: * pt_entry) bool {
- 
-	//! allocate a free physical frame
-	p = pmmngr_alloc_block ();
-	if (!p)
-		return false;
- 
-	//! map it to the page
-	pt_entry_set_frame (e, (physical_addr)p);
-	pt_entry_add_attrib (e, I86_PTE_PRESENT);
-
-	return true;
+// no Null check, look into zigs checking later
+pub fn page_table_lookup_entry(pt: *[PAGES_PER_TABLE]PAGE_PTE, virtual_addr: u32) *const PAGE_PTE {
+    return &pt[page_table_index(virtual_addr)];
 }
 
-// extern void		pd_entry_add_attrib (pd_entry* e, uint32_t attrib);
-// extern void		pd_entry_del_attrib (pd_entry* e, uint32_t attrib);
-// extern void		pd_entry_set_frame (pd_entry*, physical_addr);
-// extern bool		pd_entry_is_present (pd_entry e);
-// extern bool		pd_entry_is_user (pd_entry);
-// extern bool		pd_entry_is_4mb (pd_entry);
-// extern bool		pd_entry_is_writable (pd_entry e);
-// extern physical_addr	pd_entry_pfn (pd_entry e);
-// extern void		pd_entry_enable_global (pd_entry e);
+// no Null check, look into zigs checking later
+// page table index can be used here as well, since need frame address again
+pub fn page_directory_lookup_entry(pd: *[PAGES_PER_TABLE]PAGE_PDE, virtual_addr: u32) *const PAGE_PDE {
+    return &pd[page_table_index(virtual_addr)];
+}
+
+pub fn get_page(virtual_addr: u32) *PAGE_PDE {
+    // get page directory
+    var page_directory = current_page_directory;
+
+    //get page table in directory
+    const page_directory_entrys = &page_directory[page_directory_index(virtual_addr)];
+    const page_table: *PAGE_PTE = get_physical_address(page_directory_entrys);
+
+    //get page in table
+    const page: *PAGE_PDE = &page_table.*[page_table_index(virtual_addr)];
+    return page;
+}
