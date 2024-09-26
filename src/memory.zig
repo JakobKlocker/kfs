@@ -8,10 +8,19 @@ const PAGES_PER_DIR = 1024;
 const PTABLE_ADDR_SPACE_SIZE = 0x400000;
 const DTABLE_ADDR_SPACE_SIZE = 0x100000000;
 
-const page_table_entry: [PAGES_PER_TABLE]PAGE_PTE = undefined;
-const page_directory_entry: [PAGES_PER_DIR]PAGE_PDE = undefined;
+const PAGE_TABLE_STRUCT = struct {
+    const pages: [PAGES_PER_TABLE]PAGE_PTE = {};
+};
 
-var current_page_directory: *[PAGES_PER_TABLE]PAGE_PDE = undefined;
+const PAGE_DIRECTORY_STRUCT = struct {
+    const entrys: [PAGES_PER_DIR]PAGE_PDE = {};
+};
+
+const PAGE_TABLES: [PAGES_PER_TABLE]PAGE_TABLE_STRUCT = undefined;
+
+const PAGE_DIRECTORY: PAGE_DIRECTORY_STRUCT = undefined;
+
+var current_page_directory: *PAGE_DIRECTORY_STRUCT = undefined;
 var current_physical_pd: PAGE_PDE = PAGE_PDE{};
 
 //https://wiki.osdev.org/images/6/60/Page_table_entry.png
@@ -56,30 +65,47 @@ pub fn page_table_index(virtual_addr: u32) u32 {
 }
 
 //clear lowest 12 bits, only return frame
-pub fn get_physical_address(pte: u32) u32 {
+pub fn get_frame(pte: u32) u32 {
     return pte & ~0xFFF;
 }
 
-// no Null check, look into zigs checking later
-pub fn page_table_lookup_entry(pt: *[PAGES_PER_TABLE]PAGE_PTE, virtual_addr: u32) *const PAGE_PTE {
-    return &pt[page_table_index(virtual_addr)];
+//TODO: Allocate real physical block & cast to PAGE_PTE, replace test_page
+//DO NOT USE
+pub fn alloc_page(page_table_entry: *PAGE_PTE) *PAGE_PTE {
+    //alloc physical block instead of test_page
+    const test_page: PAGE_PTE = {};
+    page_table_entry.PTE_FRAME = get_frame(test_page);
+    page_table_entry.PTE_PRESENT = 1;
+    return test_page;
+}
+
+//TODO: Call physical function to free phyiscal memory here
+pub fn free_page(page_table_entry: *PAGE_PTE) void {
+    //call function to FREE
+    page_table_entry.PTE_PRESENT = 0;
 }
 
 // no Null check, look into zigs checking later
-// page table index can be used here as well, since need frame address again
-pub fn page_directory_lookup_entry(pd: *[PAGES_PER_TABLE]PAGE_PDE, virtual_addr: u32) *const PAGE_PDE {
-    return &pd[page_table_index(virtual_addr)];
+pub fn page_table_entry_lookup(page_table: *PAGE_TABLE_STRUCT, virtual_addr: u32) *PAGE_PTE {
+    return &page_table.*.pages[page_table_index(virtual_addr)];
 }
 
-pub fn get_page(virtual_addr: u32) *PAGE_PDE {
+// no Null check, look into zigs checking later
+pub fn page_directory_entry_lookup(page_directory: *PAGE_DIRECTORY_STRUCT, virtual_addr: u32) *PAGE_PDE {
+    return &page_directory.*.entrys[page_directory_index(virtual_addr)];
+}
+
+pub fn get_page(virtual_addr: u32) *PAGE_PTE {
     // get page directory
-    var page_directory = current_page_directory;
+    const page_directory = current_page_directory;
 
     //get page table in directory
-    const page_directory_entrys = &page_directory[page_directory_index(virtual_addr)];
-    const page_table: *PAGE_PTE = get_physical_address(page_directory_entrys);
+    const page_directory_entry = page_directory_entry_lookup(page_directory, virtual_addr);
+
+    //
+    const page_table: *PAGE_PTE = get_frame(page_directory_entry);
 
     //get page in table
-    const page: *PAGE_PDE = &page_table.*[page_table_index(virtual_addr)];
+    const page: *PAGE_PTE = &page_table.*[page_table_index(virtual_addr)];
     return page;
 }
