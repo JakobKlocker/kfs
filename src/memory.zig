@@ -109,3 +109,13 @@ pub fn get_page(virtual_addr: u32) *PAGE_PTE {
     const page: *PAGE_PTE = &page_table.*[page_table_index(virtual_addr)];
     return page;
 }
+
+//gotta check if it flushes correctly, if the asm syntax is correct
+pub fn flush_tlb(virtual_addr: u32) void {
+    asm volatile ("cli");
+    asm volatile ("invlpg (%%eax)"
+        :
+        : [virtual_addr] "{eax}" (virtual_addr),
+    );
+    asm volatile ("sti");
+}
