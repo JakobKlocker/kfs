@@ -110,6 +110,9 @@ pub fn get_page(virtual_addr: u32) *PAGE_PTE {
     return page;
 }
 
+//TODO
+pub fn map_page(virtual_addr: *PAGE_PTE, physical_addr: *u32) bool {}
+
 //gotta check if it flushes correctly, if the asm syntax is correct
 pub fn flush_tlb(virtual_addr: u32) void {
     asm volatile ("cli");
