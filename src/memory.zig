@@ -74,7 +74,7 @@ pub fn get_frame(pte: u32) u32 {
 pub fn alloc_page(page_table_entry: *PAGE_PTE) *PAGE_PTE {
     //alloc physical block instead of test_page
     const test_page: PAGE_PTE = {};
-    page_table_entry.PTE_FRAME = get_frame(test_page);
+    page_table_entry.PTE_FRAME = get_frame(test_page); // not sure if get_frame is correct here
     page_table_entry.PTE_PRESENT = 1;
     return test_page;
 }
@@ -110,10 +110,27 @@ pub fn get_page(virtual_addr: u32) *PAGE_PTE {
     return page;
 }
 
-//TODO
-pub fn map_page(virtual_addr: *PAGE_PTE, physical_addr: *u32) bool {}
+//TODO: Check how to add a u32 to Frame correctly!!! Important for all functions, where I set/get the frame
+pub fn map_page(virtual_addr: *PAGE_PTE, physical_addr: *u32) bool {
+    const page_directory = current_page_directory;
+    const page_directory_entry = page_directory_entry_lookup(page_directory, virtual_addr);
 
-//gotta check if it flushes correctly, if the asm syntax is correct
+    if (page_directory_entry.PTE_PRESENT != 1) {
+        const table: *PAGE_TABLES = {}; // Call Phyiscal Memory manager here and check if worked
+        @memset(table, 0);
+        page_directory_entry.PTE_WRITABLE = 1;
+        page_directory_entry.PTE_PRESENT = 1;
+        page_directory_entry.PTE_FRAME = table; // need to map the higher 20 bytes to the frame
+    }
+    const page_table: *PAGE_TABLE_STRUCT = get_frame(page_directory_entry);
+
+    const page = &page_table.*.pages[page_table_index(virtual_addr)];
+
+    page.PTE_PRESENT = 1;
+    page.PTE_FRAME = physical_addr; // need to map the higher 20 bytes to the frame
+}
+
+//TODO:gotta check if it flushes correctly, if the asm syntax is correct
 pub fn flush_tlb(virtual_addr: u32) void {
     asm volatile ("cli");
     asm volatile ("invlpg (%%eax)"
