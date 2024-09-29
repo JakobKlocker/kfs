@@ -17,9 +17,7 @@ const PAGE_DIRECTORY_STRUCT = struct {
 };
 
 const PAGE_TABLES: [PAGES_PER_TABLE]PAGE_TABLE_STRUCT = undefined;
-
 const PAGE_DIRECTORY: PAGE_DIRECTORY_STRUCT = undefined;
-
 var current_page_directory: *PAGE_DIRECTORY_STRUCT = undefined;
 var current_physical_pd: PAGE_PDE = PAGE_PDE{};
 
@@ -40,16 +38,16 @@ const PAGE_PTE = packed struct(u32) {
 
 //Page Directory Entry
 const PAGE_PDE = packed struct(u32) {
-    PTE_PRESENT: u1 = 0, // 1 bit for Present (P)
-    PTE_WRITABLE: u1 = 0, // 1 bit for Read/Write (RW)
-    PTE_USER: u1 = 0, // 1 bit for User/Supervisor (U/S)
-    PTE_WRITETHROUGH: u1 = 0, // 1 bit for Write-through (PWT)
-    PTE_NOT_CACHEABLE: u1 = 0, // 1 bit for Cache Disable (PCD)
-    PTE_ACCESSED: u1 = 0, // 1 bit for Accessed (A)
-    PTE_UNUSED: u1 = 0, // 1 bit
-    PTE_PAT: u1 = 0, // 1 bit for Page Attribute Table (PAT)
-    PTE_UNUSED1: u4 = 0, // 3 bits (AVL/UNUSED)
-    PTE_FRAME: u20 = 0, // 20 bits for the frame address (physical page)
+    PDE_PRESENT: u1 = 0, // 1 bit for Present (P)
+    PDE_WRITABLE: u1 = 0, // 1 bit for Read/Write (RW)
+    PDE_USER: u1 = 0, // 1 bit for User/Supervisor (U/S)
+    PDE_WRITETHROUGH: u1 = 0, // 1 bit for Write-through (PWT)
+    PDE_NOT_CACHEABLE: u1 = 0, // 1 bit for Cache Disable (PCD)
+    PDE_ACCESSED: u1 = 0, // 1 bit for Accessed (A)
+    PDE_UNUSED: u1 = 0, // 1 bit
+    PDE_PAT: u1 = 0, // 1 bit for Page Attribute Table (PAT)
+    PDE_UNUSED1: u4 = 0, // 3 bits (AVL/UNUSED)
+    PDE_FRAME: u20 = 0, // 20 bits for the frame address (physical page)
 };
 
 const myTest = PAGE_PTE{
@@ -64,9 +62,10 @@ pub fn page_table_index(virtual_addr: u32) u32 {
     return (virtual_addr >> 12) & 0x3FF;
 }
 
-//clear lowest 12 bits, only return frame
+//clear lowest 12 bits, if address is 0x12345ABC make it to 0x12345000, since that will be the frame (only 20 bits)
+//so it clears the flags, and just keeps the frame when calling it with a PTE
 pub fn get_frame(pte: u32) u32 {
-    return pte & ~0xFFF;
+    return pte & 0xFFFFF000;
 }
 
 //TODO: Allocate real physical block & cast to PAGE_PTE, replace test_page
@@ -102,7 +101,7 @@ pub fn get_page(virtual_addr: u32) *PAGE_PTE {
     //get page table in directory
     const page_directory_entry = page_directory_entry_lookup(page_directory, virtual_addr);
 
-    //
+    //Clear the flags, so I have only the Page Table Pointer
     const page_table: *PAGE_PTE = get_frame(page_directory_entry);
 
     //get page in table
