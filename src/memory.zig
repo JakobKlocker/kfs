@@ -119,14 +119,14 @@ pub fn map_page(virtual_addr: *PAGE_PTE, physical_addr: *u32) bool {
         @memset(table, 0);
         page_directory_entry.PTE_WRITABLE = 1;
         page_directory_entry.PTE_PRESENT = 1;
-        page_directory_entry.PTE_FRAME = table; // need to map the higher 20 bytes to the frame
+        page_directory_entry.PTE_FRAME = @truncate(table >> 12); // just map the higher 20 bits to the frame, maybe function for that?
     }
     const page_table: *PAGE_TABLE_STRUCT = get_frame(page_directory_entry);
 
     const page = &page_table.*.pages[page_table_index(virtual_addr)];
 
     page.PTE_PRESENT = 1;
-    page.PTE_FRAME = physical_addr; // need to map the higher 20 bytes to the frame
+    page.PTE_FRAME = @truncate(physical_addr >> 12); // just map the higher 20 bits to the frame, maybe function for that?
 }
 
 //TODO:gotta check if it flushes correctly, if the asm syntax is correct
