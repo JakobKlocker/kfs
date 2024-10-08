@@ -1,6 +1,11 @@
 const multiboot = @import("multibootheader.zig");
 const print = @import("print.zig").print;
+const panic = @import("print.zig").panic;
+const panicLevels = @import("print.zig").panicLevel;
 
+// 
+// PMM = Physical Memory Manager
+// 
 const PAGE_SIZE = 4096;
 const FREE = 0;
 const USED = 1;
@@ -12,16 +17,16 @@ var MMAP: [*]u1 = undefined;
 
 pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
     if (mbd.flags & 0x1 == 0)
-        print("invalide memory size", .{});
+        panic("Invalide memory size", panicLevels.HIGH);
     if (magic != multiboot.MULTIBOOT_BOOTLOADER_MAGIC) 
-        print("invalide magic number", .{});
+        panic("Invalide magic number", panicLevels.HIGH);
     if (mbd.flags >> 6 & 0x1 == 0) 
-        print("wrong map\n", .{});
+        panic("Invalide memory map", panicLevels.HIGH);
 
     totalMemory = mbd.mem_lower + mbd.mem_upper;
     maxBlocks = (totalMemory * 1024) / PAGE_SIZE;
 
-    MMAP = @ptrFromInt(0x1000000);
+    MMAP = @ptrFromInt(0x200000);
 
     // set all memory used
     for (0..maxBlocks) |i| {
@@ -35,9 +40,8 @@ pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
         const entryStruct: *align(8) multiboot.multiboot_mmap_entry = @ptrFromInt(entry);
         const addr: u32 = @truncate(entryStruct.addr);
         const len: u32 = @truncate(entryStruct.len);
-        const size: u32 = entryStruct.size;
         const etype: u32 = entryStruct.type;
-        print("Start Addr: {x} | Length: {x} | Size: {x} | Type: {}\n", .{addr, len, size, etype});
+        print("Start Addr: {x} | Length: {x} | Size: {x} | Type: {}\n", .{addr, len, entryStruct.size, etype});
 
         if (etype == multiboot.MULTIBOOT_MEMORY_AVAILABLE) {
             const start = addr / PAGE_SIZE;
@@ -53,6 +57,19 @@ pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
 
     // set the first page as used so address 0 is allways in use
     MMAP[0] = USED;
+
+    reallocMMAP() catch panic("OUT_OF_MEMORY", panicLevels.HIGH);
+}
+
+fn reallocMMAP() !void {
+    const oldMMAP = MMAP;
+
+    const new = maxBlocks / 8 / PAGE_SIZE + 1;
+    MMAP = @ptrFromInt(try getPages(new));
+
+    for (0..maxBlocks) |i| {
+        MMAP[i] = oldMMAP[i];
+    }
 }
 
 pub fn getPages(amount: usize) !usize {
@@ -72,4 +89,13 @@ pub fn getPages(amount: usize) !usize {
         }
     }
     return error.OUT_OF_MEMORY;
+}
+
+pub fn freePages(addr: usize, amount: usize) void {
+    const pos = addr / PAGE_SIZE;
+
+    for (pos..amount) |i| {
+        if (pos + i < maxBlocks)
+            MMAP[pos + i] = FREE;
+    }
 }
