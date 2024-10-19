@@ -10,6 +10,7 @@ const printStack = @import("print.zig").printStack;
 const IDT = @import("idt.zig");
 const PIC = @import("pic.zig");
 const mem = @import("PMM.zig");
+const vmm = @import("vmm.zig");
 
 export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     GDT.gdt.init();
@@ -24,8 +25,6 @@ export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     console.setColor(VGA.LightCyan, VGA.Black);
     print("{c}", .{"2"});
     console.setColor(VGA.White, VGA.Black);
-
-    _ = MEMORY.page_table_index(0x123);
 
     while (true) {
         port.io_wait();

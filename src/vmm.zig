@@ -1,25 +1,8 @@
+const pmm = @import("PMM.zig").getPages;
+
 //Virtual Address Format
 //AAAAAAAAAA         BBBBBBBBBB        CCCCCCCCCCCC
 // directory index    page table index  offset into page
-
-const PAGES_SIZE = 4096;
-const PAGES_PER_TABLE = 1024;
-const PAGES_PER_DIR = 1024;
-const PTABLE_ADDR_SPACE_SIZE = 0x400000;
-const DTABLE_ADDR_SPACE_SIZE = 0x100000000;
-
-const PAGE_TABLE_STRUCT = struct {
-    const pages: [PAGES_PER_TABLE]PAGE_PTE = {};
-};
-
-const PAGE_DIRECTORY_STRUCT = struct {
-    const entrys: [PAGES_PER_DIR]PAGE_PDE = {};
-};
-
-const PAGE_TABLES: [PAGES_PER_TABLE]PAGE_TABLE_STRUCT = undefined;
-const PAGE_DIRECTORY: PAGE_DIRECTORY_STRUCT = undefined;
-var current_page_directory: *PAGE_DIRECTORY_STRUCT = undefined;
-var current_physical_pd: PAGE_PDE = PAGE_PDE{};
 
 //https://wiki.osdev.org/images/6/60/Page_table_entry.png
 const PAGE_PTE = packed struct(u32) {
@@ -50,9 +33,31 @@ const PAGE_PDE = packed struct(u32) {
     PDE_FRAME: u20 = 0, // 20 bits for the frame address (physical page)
 };
 
-const myTest = PAGE_PTE{
-    .PTE_ACCESSED = 1,
+// const VirtualMemoryBlock = struct {
+//     start_addr: u32,
+//     size_in_pages: usize,
+//     is_free: bool,
+//     next: ?*VirtualMemoryBlock,
+// };
+
+const PAGES_SIZE = 4096;
+const PAGES_PER_TABLE = 1024;
+const PAGES_PER_DIR = 1024;
+const PTABLE_ADDR_SPACE_SIZE = 0x400000;
+const DTABLE_ADDR_SPACE_SIZE = 0x100000000;
+
+const PAGE_TABLE_STRUCT = struct {
+    const pages: [PAGES_PER_TABLE]PAGE_PTE = {};
 };
+
+const PAGE_DIRECTORY_STRUCT = struct {
+    const entrys: [PAGES_PER_DIR]PAGE_PDE = {};
+};
+
+const PAGE_TABLES: [PAGES_PER_TABLE]PAGE_TABLE_STRUCT = undefined;
+const PAGE_DIRECTORY: PAGE_DIRECTORY_STRUCT = undefined;
+var current_page_directory: *PAGE_DIRECTORY_STRUCT = undefined;
+var current_physical_pd: PAGE_PDE = PAGE_PDE{};
 
 pub fn page_directory_index(virtual_addr: u32) u32 {
     return (virtual_addr >> 22) & 0x3FF;
@@ -69,13 +74,12 @@ pub fn get_frame(pte: u32) u32 {
 }
 
 //TODO: Allocate real physical block & cast to PAGE_PTE, replace test_page
-//DO NOT USE
 pub fn alloc_page(page_table_entry: *PAGE_PTE) *PAGE_PTE {
     //alloc physical block instead of test_page
-    const test_page: PAGE_PTE = {};
-    page_table_entry.PTE_FRAME = get_frame(test_page); // not sure if get_frame is correct here
+    const page = pmm.getPages(1);
+    page_table_entry.PTE_FRAME = get_frame(page); // not sure if get_frame is correct here
     page_table_entry.PTE_PRESENT = 1;
-    return test_page;
+    return page;
 }
 
 //TODO: Call physical function to free phyiscal memory here
@@ -115,7 +119,9 @@ pub fn map_page(virtual_addr: *PAGE_PTE, physical_addr: *u32) bool {
     const page_directory_entry = page_directory_entry_lookup(page_directory, virtual_addr);
 
     if (page_directory_entry.PTE_PRESENT != 1) {
-        const table: *PAGE_TABLES = {}; // Call Phyiscal Memory manager here and check if worked
+        // const table: *PAGE_TABLES = {}; // Call Phyiscal Memory manager here and check if worked
+        const table: *PAGE_TABLES = pmm.getPages(1);
+
         @memset(table, 0);
         page_directory_entry.PTE_WRITABLE = 1;
         page_directory_entry.PTE_PRESENT = 1;
@@ -138,3 +144,5 @@ pub fn flush_tlb(virtual_addr: u32) void {
     );
     asm volatile ("sti");
 }
+
+pub fn init_vmm() void {}
