@@ -5,7 +5,7 @@ all:
 	mv kernel bootdir/boot/kernel.elf
 	cp grub.cfg bootdir/boot/grub
 	grub-mkrescue -o kernel.iso bootdir --compress=xz
-	qemu-system-i386 -cdrom kernel.iso -d int,cpu_reset -no-reboot
+	qemu-system-i386 -cdrom kernel.iso -m 1024M
 
 debug:
 	rm -rf kernel.iso
@@ -14,4 +14,4 @@ debug:
 	mv kernel bootdir/boot/kernel.elf
 	cp grub.cfg bootdir/boot/grub
 	grub-mkrescue -o kernel.iso bootdir --compress=xz
-	qemu-system-i386 -cdrom kernel.iso -gdb tcp::1234 -S #-d int,cpu_reset -no-reboot
+	qemu-system-i386 -cdrom kernel.iso -m 1024M -gdb tcp::1234 -S

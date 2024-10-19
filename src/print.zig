@@ -1,4 +1,5 @@
 const console = @import("console.zig").Console;
+const VGA_COLOR = @import("console.zig").VGA_COLOR;
 
 const State = enum {
     start,
@@ -191,4 +192,28 @@ extern fn getStackBottom() usize; comptime {
         \\  mov $stack_top, %eax
         \\  ret
     );
+}
+
+pub const panicLevel = enum {
+    LOW,
+    MEDIUM,
+    HIGH,
+};
+
+pub fn panic(str: []const u8, level: panicLevel) void {
+    if (level == panicLevel.HIGH) {
+        console.setColor(VGA_COLOR.Red, VGA_COLOR.Black);
+    } else if (level == panicLevel.MEDIUM) {
+        console.setColor(VGA_COLOR.Brown, VGA_COLOR.Black);
+    }
+
+    print("Panic: {c}", .{str});
+    console.setColor(VGA_COLOR.White, VGA_COLOR.Black);
+
+
+    if (level == panicLevel.HIGH) {
+        
+    } else if (level == panicLevel.MEDIUM) {
+
+    }
 }
