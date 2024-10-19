@@ -1,3 +1,4 @@
+const multiboot = @import("multibootheader.zig");
 const console = @import("console.zig").Console;
 const port = @import("ports.zig");
 const keyboard = @import("keyboard.zig").Keyboard;
@@ -8,11 +9,14 @@ const print = @import("print.zig").print;
 const printStack = @import("print.zig").printStack;
 const IDT = @import("idt.zig");
 const PIC = @import("pic.zig");
+const mem = @import("PMM.zig");
 
-export fn kernel_main() void {
+export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     GDT.gdt.init();
     PIC.remapPic();
     IDT.idt.init();
+    mem.init(mbd, magic);
+
     console.clear();
     console.setActiveBuffer(0) catch unreachable;
     console.setColor(VGA.DarkGray, VGA.Black);

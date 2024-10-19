@@ -20,12 +20,14 @@
 	stack_bottom:
 		.skip 4096
 	stack_top:
+
  
 .section .text
 	_start:
-
 		mov $stack_top, %esp
 
+        push %eax
+        push %ebx
 		call kernel_main
  
 		hang:
