@@ -15,7 +15,6 @@ export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     GDT.gdt.init();
     PIC.remapPic();
     IDT.idt.init();
-    mem.init(mbd, magic);
 
     console.clear();
     console.setActiveBuffer(0) catch unreachable;
@@ -24,6 +23,8 @@ export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     console.setColor(VGA.LightCyan, VGA.Black);
     print("{c}", .{"2"});
     console.setColor(VGA.White, VGA.Black);
+
+    mem.init(mbd, magic);
 
     while (true) {
         port.io_wait();

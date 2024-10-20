@@ -2,11 +2,12 @@ const multiboot = @import("multibootheader.zig");
 const print = @import("print.zig").print;
 const panic = @import("print.zig").panic;
 const panicLevels = @import("print.zig").panicLevel;
+const vector = @import("vector.zig").Vector;
 
 // 
 // PMM = Physical Memory Manager
 // 
-const PAGE_SIZE = 4096;
+pub const PAGE_SIZE = 4096;
 const FREE = 0;
 const USED = 1;
 
@@ -14,6 +15,7 @@ pub var totalMemory: u32 = 0; // in KiB
 pub var usedBlocks: u32 = 0;
 pub var maxBlocks: u32 = 0;
 var MMAP: [*]u1 = undefined;
+var free_memory: [*]multiboot.multiboot_mmap_entry = undefined;
 
 pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
     if (mbd.flags & 0x1 == 0)
@@ -27,6 +29,7 @@ pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
     maxBlocks = (totalMemory * 1024) / PAGE_SIZE;
 
     MMAP = @ptrFromInt(0x200000);
+    free_memory = @ptrFromInt(@intFromPtr(MMAP) - 0x1000);
 
     // set all memory used
     for (0..maxBlocks) |i| {
@@ -36,6 +39,7 @@ pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
     // set all memory that is free to free
     print("\n", .{});
     var entry: u32 = mbd.mmap_addr;
+    var index: u32 = 0;
     while (entry < mbd.mmap_addr + mbd.mmap_length) {
         const entryStruct: *align(8) multiboot.multiboot_mmap_entry = @ptrFromInt(entry);
         const addr: u32 = @truncate(entryStruct.addr);
@@ -50,6 +54,9 @@ pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
             for (start..start + range) |i| {
                 MMAP[i] = FREE;
             }
+
+            free_memory[index] = entryStruct.*;
+            index += 1;
         }
 
         entry = entry + entryStruct.size + @sizeOf(@TypeOf(entryStruct.size));
@@ -83,6 +90,9 @@ pub fn getPages(amount: usize) !usize {
                     for (0..amount) |k| {
                         MMAP[i + k] = USED; // set memory used
                     }
+                    const size = .{.location=i, .len=amount};
+                    _ = size;
+
                     return i * PAGE_SIZE;
                 }
             }
