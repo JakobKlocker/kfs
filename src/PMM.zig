@@ -3,10 +3,9 @@ const print = @import("print.zig").print;
 const panic = @import("print.zig").panic;
 const panicLevels = @import("print.zig").panicLevel;
 
-
-// 
+//
 // PMM = Physical Memory Manager
-// 
+//
 const PAGE_SIZE = 4096;
 const FREE = 0;
 const USED = 1;
@@ -19,9 +18,9 @@ var MMAP: [*]u1 = undefined;
 pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
     if (mbd.flags & 0x1 == 0)
         panic("Invalide memory size", panicLevels.HIGH);
-    if (magic != multiboot.MULTIBOOT_BOOTLOADER_MAGIC) 
+    if (magic != multiboot.MULTIBOOT_BOOTLOADER_MAGIC)
         panic("Invalide magic number", panicLevels.HIGH);
-    if (mbd.flags >> 6 & 0x1 == 0) 
+    if (mbd.flags >> 6 & 0x1 == 0)
         panic("Invalide memory map", panicLevels.HIGH);
 
     totalMemory = mbd.mem_lower + mbd.mem_upper;
@@ -42,7 +41,7 @@ pub fn init(mbd: *multiboot.multiboot_info, magic: u32) void {
         const addr: u32 = @truncate(entryStruct.addr);
         const len: u32 = @truncate(entryStruct.len);
         const etype: u32 = entryStruct.type;
-        print("Start Addr: {x} | Length: {x} | Size: {x} | Type: {}\n", .{addr, len, entryStruct.size, etype});
+        print("Start Addr: {x} | Length: {x} | Size: {x} | Type: {}\n", .{ addr, len, entryStruct.size, etype });
 
         if (etype == multiboot.MULTIBOOT_MEMORY_AVAILABLE) {
             const start = addr / PAGE_SIZE;

@@ -1,4 +1,4 @@
-const pmm = @import("PMM.zig").getPages;
+const pmm = @import("PMM.zig");
 
 //Virtual Address Format
 //AAAAAAAAAA         BBBBBBBBBB        CCCCCCCCCCCC
@@ -32,13 +32,6 @@ const PAGE_PDE = packed struct(u32) {
     PDE_UNUSED1: u4 = 0, // 3 bits (AVL/UNUSED)
     PDE_FRAME: u20 = 0, // 20 bits for the frame address (physical page)
 };
-
-// const VirtualMemoryBlock = struct {
-//     start_addr: u32,
-//     size_in_pages: usize,
-//     is_free: bool,
-//     next: ?*VirtualMemoryBlock,
-// };
 
 const PAGES_SIZE = 4096;
 const PAGES_PER_TABLE = 1024;
@@ -145,4 +138,82 @@ pub fn flush_tlb(virtual_addr: u32) void {
     asm volatile ("sti");
 }
 
-pub fn init_vmm() void {}
+fn clear_table(table: *PAGE_TABLE_STRUCT) void {
+    for (table.pages) |*page| {
+        page.* = PAGE_PTE{};
+    }
+}
+pub fn init_vmm() !void {
+    // First kernel upper halve & Idendity map first 4MB
+    const idendity_table: *PAGE_TABLE_STRUCT = @ptrFromInt(try (pmm.getPages(1)));
+    const kernel_table: *PAGE_TABLE_STRUCT = @ptrFromInt(try (pmm.getPages(1)));
+
+    clear_table(idendity_table);
+    clear_table(kernel_table);
+
+    for (0..1024) |i| {
+        const addr = i * PAGES_SIZE;
+        var page: PAGE_PTE = @bitCast(try (pmm.getPages(1)));
+        page.PTE_PRESENT = 1;
+        page.PTE_FRAME = @truncate(addr >> 12); // just map the higher 20 bits to the frame, maybe function for that?
+
+        idendity_table.*.pages[page_table_index(addr)] = page; // how to access this?!
+    }
+
+    var frame = 0x100000;
+    var virt_addr = 0xc0000000;
+    for (0..1024) |_| {
+        var page: PAGE_PTE = pmm.getPages(1) catch |err| {
+            _ = err;
+            return;
+        };
+        page.PTE_PRESENT = 1;
+        page.PTE_FRAME = @truncate(frame >> 12); // just map the higher 20 bits to the frame, maybe function for that?
+
+        kernel_table.*[page_table_index(virt_addr)] = page;
+
+        frame += 4096;
+        virt_addr += 4096;
+    }
+
+    const page_directory: *PAGE_DIRECTORY_STRUCT = pmm.getPages(1) catch |err| {
+        _ = err;
+        return;
+    };
+
+    page_directory.*.entrys[page_directory_index(0x00000000)].PDE_PRESENT = 1;
+    page_directory.*.entrys[page_directory_index(0x00000000)].PDE_WRITABLE = 1;
+    page_directory.*.entrys[page_directory_index(0x00000000)].PDE_FRAME = @truncate(idendity_table >> 12);
+
+    page_directory.*.entrys[page_directory_index(0xc0000000)].PDE_PRESENT = 1;
+    page_directory.*.entrys[page_directory_index(0xc0000000)].PDE_WRITABLE = 1;
+    page_directory.*.entrys[page_directory_index(0xc0000000)].PDE_FRAME = @truncate(kernel_table >> 12);
+
+    // //activate recursive paging, FFC00000 == [1023]
+    page_directory.*.entrys[1023].PDE_PRESENT = 1;
+    page_directory.*.entrys[1023].PDE_WRITABLE = 1;
+    page_directory.*.entrys[1023].PDE_FRAME = @truncate(page_directory >> 12);
+
+    loadPageDir(page_directory);
+    activatePaging();
+}
+
+pub inline fn loadPageDir(page_dir: *PAGE_DIRECTORY_STRUCT) void {
+    asm volatile ("mov cr3, (%%eax)"
+        :
+        : [page_dir] "{eax}" (page_dir),
+    );
+}
+
+extern fn activatePaging() void;
+comptime {
+    asm (
+        \\.global activatePaging
+        \\.type activatePaging, @function;
+        \\activatePaging:
+        \\   mov %cr0, %eax
+        \\   or $0x80000001, %eax
+        \\   mov %eax, %cr0
+        \\   ret
+    );
+}

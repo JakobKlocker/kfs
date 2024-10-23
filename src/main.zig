@@ -11,6 +11,8 @@ const IDT = @import("idt.zig");
 const PIC = @import("pic.zig");
 const mem = @import("PMM.zig");
 const vmm = @import("vmm.zig");
+const panic = @import("print.zig").panic;
+const panicLevels = @import("print.zig").panicLevel;
 
 export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     GDT.gdt.init();
@@ -25,7 +27,7 @@ export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     console.setColor(VGA.LightCyan, VGA.Black);
     print("{c}", .{"2"});
     console.setColor(VGA.White, VGA.Black);
-
+    vmm.init_vmm() catch panic("OUT_OF_MEMORY", panicLevels.HIGH);
     while (true) {
         port.io_wait();
     }

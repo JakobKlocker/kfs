@@ -1,6 +1,6 @@
 all:
 	rm -rf kernel.iso
-	zig build -Dtarget=x86-freestanding --release=off
+	zig build -Dtarget=x86-freestanding --release=off 
 	mkdir -p bootdir/boot/grub
 	mv kernel bootdir/boot/kernel.elf
 	cp grub.cfg bootdir/boot/grub
