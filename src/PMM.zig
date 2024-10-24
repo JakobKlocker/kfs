@@ -2,7 +2,7 @@ const multiboot = @import("multibootheader.zig");
 const print = @import("print.zig").print;
 const panic = @import("print.zig").panic;
 const panicLevels = @import("print.zig").panicLevel;
-const vector = @import("vector.zig").Vector;
+const vector = @import("pageVector.zig").PageVector;
 
 // 
 // PMM = Physical Memory Manager
@@ -79,7 +79,7 @@ fn reallocMMAP() !void {
     }
 }
 
-pub fn getPages(amount: usize) !usize {
+pub fn getPagesInternal(amount: usize) !usize {
     for (0..maxBlocks - amount) |i| {
         if (MMAP[i] == FREE) { // look for free memory
             for (0..amount) |j| {
@@ -101,11 +101,39 @@ pub fn getPages(amount: usize) !usize {
     return error.OUT_OF_MEMORY;
 }
 
-pub fn freePages(addr: usize, amount: usize) void {
+pub fn freePagesInternal(addr: usize, amount: usize) void {
     const pos = addr / PAGE_SIZE;
 
     for (pos..amount) |i| {
         if (pos + i < maxBlocks)
             MMAP[pos + i] = FREE;
+    }
+}
+
+const region = struct {
+    addr: usize,
+    len: usize,
+};
+
+var regions = vector(region).init();
+
+pub fn getPages(amount: usize) !usize {
+    const addr = try getPagesInternal(amount);
+
+    try regions.add(.{
+        .addr = addr,
+        .len = amount,
+    });
+
+    return addr;
+}
+
+pub fn freePages(addr: usize) void {
+
+    for (0..regions.size) |i| {
+        if (regions.get(i).addr == addr) {
+            freePagesInternal(addr, regions.get(i).len);
+            regions.remove(i);
+        }
     }
 }
