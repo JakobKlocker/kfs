@@ -25,8 +25,8 @@ export fn kernel_main(mbd: *multiboot.multiboot_info, magic: u32) void {
     console.setColor(VGA.DarkGray, VGA.Black);
     print("{c}", .{"4"});
     console.setColor(VGA.LightCyan, VGA.Black);
-    print("{c}", .{"2"});
     console.setColor(VGA.White, VGA.Black);
+    print("{c}", .{"2"});
     vmm.init_vmm() catch panic("OUT_OF_MEMORY", panicLevels.HIGH);
     while (true) {
         port.io_wait();

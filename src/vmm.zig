@@ -171,7 +171,9 @@ pub fn init_vmm() !void {
         const addr = i * PAGES_SIZE;
         var page: PAGE_PTE = @bitCast(clear_page(try (pmm.getPages(1))));
         page.PTE_PRESENT = 1;
-        page.PTE_FRAME = @truncate(addr >> 12); // just map the higher 20 bits to the frame, maybe function for that?
+        const frame: u20 = @truncate(addr >> 12);
+        page.PTE_FRAME = frame; // just map the higher 20 bits to the frame, maybe function for that?
+        page.PTE_WRITABLE = 1;
 
         idendity_table.*.pages[page_table_index(addr)] = page; // how to access this?!
     }
@@ -181,6 +183,7 @@ pub fn init_vmm() !void {
     for (0..1024) |_| {
         var page: PAGE_PTE = @bitCast(clear_page(try (pmm.getPages(1))));
         page.PTE_PRESENT = 1;
+        page.PTE_WRITABLE = 1;
         page.PTE_FRAME = @truncate(frame >> 12); // just map the higher 20 bits to the frame, maybe function for that?
 
         kernel_table.*.pages[page_table_index(virt_addr)] = page;
@@ -200,34 +203,34 @@ pub fn init_vmm() !void {
     page_directory.*.entrys[page_directory_index(0xc0000000)].PDE_FRAME = @truncate(@intFromPtr(kernel_table) >> 12);
 
     // //activate recursive paging, FFC00000 == [1023]
-    page_directory.*.entrys[1023].PDE_PRESENT = 1;
-    page_directory.*.entrys[1023].PDE_WRITABLE = 1;
-    page_directory.*.entrys[1023].PDE_FRAME = @truncate(@intFromPtr(page_directory) >> 12);
+    // page_directory.*.entrys[1023].PDE_PRESENT = 1;
+    // page_directory.*.entrys[1023].PDE_WRITABLE = 1;
+    // page_directory.*.entrys[1023].PDE_FRAME = @truncate(@intFromPtr(page_directory) >> 12);
 
-    loadPageDir(page_directory);
-    activatePaging();
+    // loadPageDir(page_directory);
+    // activatePaging();
 }
 
-extern fn loadPageDir(page_dir: *PAGE_DIRECTORY_STRUCT) void;
-comptime {
-    asm (
-        \\.global loadPageDir
-        \\.type loadPageDir, @function;
-        \\loadPageDir:
-        \\   mov %eax, %cr3
-        \\   ret
-    );
-}
+// extern fn loadPageDir(page_dir: *PAGE_DIRECTORY_STRUCT) void;
+// comptime {
+//     asm (
+//         \\.global loadPageDir
+//         \\.type loadPageDir, @function;
+//         \\loadPageDir:
+//         \\   mov %eax, %cr3
+//         \\   ret
+//     );
+// }
 
-extern fn activatePaging() void;
-comptime {
-    asm (
-        \\.global activatePaging
-        \\.type activatePaging, @function;
-        \\activatePaging:
-        \\   mov %cr0, %eax
-        \\   or $0x80000001, %eax
-        \\   mov %eax, %cr0
-        \\   ret
-    );
-}
+// extern fn activatePaging() void;
+// comptime {
+//     asm (
+//         \\.global activatePaging
+//         \\.type activatePaging, @function;
+//         \\activatePaging:
+//         \\   mov %cr0, %eax
+//         \\   or $0x80000001, %eax
+//         \\   mov %eax, %cr0
+//         \\   ret
+//     );
+// }
