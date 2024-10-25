@@ -144,6 +144,21 @@ fn clear_table(table: *PAGE_TABLE_STRUCT) void {
     }
 }
 
+fn clear_page(page: usize) usize {
+    const ptr: [*]u8 = @ptrFromInt(page);
+    for (0..4096) |i| {
+        ptr[i] = 0;
+    }
+    return page;
+}
+
+// fn clear_page_dir(page: *PAGE_DIRECTORY) void {
+//     const ptr: [*]u8 = @ptrCast(page);
+//     for (0..4096) |i| {
+//         ptr[i] = 0;
+//     }
+// }
+
 pub fn init_vmm() !void {
     // First kernel upper halve & Idendity map first 4MB
     const idendity_table: *PAGE_TABLE_STRUCT = @ptrFromInt(try (pmm.getPages(1)));
@@ -154,7 +169,7 @@ pub fn init_vmm() !void {
 
     for (0..1024) |i| {
         const addr = i * PAGES_SIZE;
-        var page: PAGE_PTE = @bitCast(try (pmm.getPages(1)));
+        var page: PAGE_PTE = @bitCast(clear_page(try (pmm.getPages(1))));
         page.PTE_PRESENT = 1;
         page.PTE_FRAME = @truncate(addr >> 12); // just map the higher 20 bits to the frame, maybe function for that?
 
@@ -164,7 +179,7 @@ pub fn init_vmm() !void {
     var frame: u32 = 0x100000;
     var virt_addr: u32 = 0xc0000000;
     for (0..1024) |_| {
-        var page: PAGE_PTE = @bitCast(try (pmm.getPages(1)));
+        var page: PAGE_PTE = @bitCast(clear_page(try (pmm.getPages(1))));
         page.PTE_PRESENT = 1;
         page.PTE_FRAME = @truncate(frame >> 12); // just map the higher 20 bits to the frame, maybe function for that?
 
@@ -174,7 +189,7 @@ pub fn init_vmm() !void {
         virt_addr += 4096;
     }
 
-    const page_directory: *PAGE_DIRECTORY_STRUCT = @ptrFromInt(try (pmm.getPages(1)));
+    const page_directory: *PAGE_DIRECTORY_STRUCT = @ptrFromInt(clear_page(try (pmm.getPages(1))));
 
     page_directory.*.entrys[page_directory_index(0x00000000)].PDE_PRESENT = 1;
     page_directory.*.entrys[page_directory_index(0x00000000)].PDE_WRITABLE = 1;
@@ -192,13 +207,6 @@ pub fn init_vmm() !void {
     loadPageDir(page_directory);
     activatePaging();
 }
-
-// pub inline fn loadPageDir(page_dir: *PAGE_DIRECTORY_STRUCT) void {
-//     asm volatile ("mov cr3, (%%eax)"
-//         :
-//         : [page_dir] "{eax}" (page_dir),
-//     );
-// }
 
 extern fn loadPageDir(page_dir: *PAGE_DIRECTORY_STRUCT) void;
 comptime {
